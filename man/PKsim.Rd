@@ -50,13 +50,15 @@ plot(Data,aspect=1/1)
 #Estimation of model parameters
 OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 
-fit1 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Time,ID),
-        data = Data, fixed=ka+CL+V1+F1~1, random = pdDiag(ka+CL+V1~1), 
-        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8)),
-        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
-        verbose=TRUE)
+#Remove '#' below to run the estimation
 
-plot(augPred(fit1,level=0:1,length.out=300),aspect=1/1)
+#fit1 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Time,ID),
+#        data = Data, fixed=ka+CL+V1+F1~1, random = pdDiag(ka+CL+V1~1), 
+#        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8)),
+#        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+#        verbose=TRUE)
+
+#plot(augPred(fit1,level=0:1,length.out=300),aspect=1/1)
 
 #Estimation of rate of infusion
 Data$Rate[Data$Rate==5] <- -1
@@ -73,13 +75,15 @@ OneCompAbs <- list(DiffEq=list(
 
 OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 
-fit2 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Rate,Time,ID),
-        data = Data, fixed=ka+CL+V1+F1+Rate~1, random = pdDiag(ka+CL+V1~1), 
-        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Rate=log(5)),
-        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
-        verbose=TRUE)
+#Remove '#' below to run the estimation
 
-plot(augPred(fit2,level=0:1,length.out=300),aspect=1/1)
+#fit2 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Rate,Time,ID),
+#        data = Data, fixed=ka+CL+V1+F1+Rate~1, random = pdDiag(ka+CL+V1~1), 
+#        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Rate=log(5)),
+#        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+#        verbose=TRUE)
+
+#plot(augPred(fit2,level=0:1,length.out=300),aspect=1/1)
 
 #Estimation of length of infusion
 Data$Rate[Data$Rate==-1] <- -2
@@ -96,12 +100,14 @@ OneCompAbs <- list(DiffEq=list(
 
 OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 
-fit3 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Tcrit,Time,ID),
-        data = Data, fixed=ka+CL+V1+F1+Tcrit~1, random = pdDiag(ka+CL+V1~1), 
-        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Tcrit=log(20)),
-        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
-        verbose=TRUE)
+#Remove '#' below to run the estimation
 
-plot(augPred(fit3,level=0:1,length.out=300),aspect=1/1)
+#fit3 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Tcrit,Time,ID),
+#        data = Data, fixed=ka+CL+V1+F1+Tcrit~1, random = pdDiag(ka+CL+V1~1), 
+#        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Tcrit=log(20)),
+#        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+#        verbose=TRUE)
+
+#plot(augPred(fit3,level=0:1,length.out=300),aspect=1/1)
 }
 \keyword{models}

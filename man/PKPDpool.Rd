@@ -103,11 +103,11 @@ PredSim <- PKPDpoolModel(  rep(rep(PopCoef[1],12),each=2*ni),
 
 plotPool <- as.data.frame(rbind(cbind(TimeSim,IDSim,PredSim,TypeSim,rep("Pred",2400)),
                           cbind(TimeSim,IDSim,IpredSim,TypeSim,rep("Ipred",2400)),
-                          cbind(Data$Time,Data$ID,Data$Conc,Data$Type,rep("Obs",288))
-                         ))
+                          cbind(Data$Time,Data$ID,Data$Conc,Data$Type,rep("Obs",288))))
+
 names(plotPool) <- c("Time","ID","Conc","Type","Flag")
 
-plotPool$ID <- as.factor(as.numeric(as.character(plotPool$ID)))
+plotPool$ID   <- as.factor(as.numeric(as.character(plotPool$ID)))
 plotPool$Type <- as.factor(plotPool$Type)
 plotPool$Flag <- as.factor(plotPool$Flag)
 plotPool$Conc <- as.numeric(as.character(plotPool$Conc))
@@ -117,11 +117,6 @@ plotPoolPK <- subset(plotPool,Type==1)
 plotPoolPD <- subset(plotPool,Type==2)
 
 require(lattice)
-trellis.device(width=7, height=6.5,bg="transparent")
-sb <- trellis.par.get("strip.background")
-sb$col <- c(16,11,9,13,10,15,14)
-trellis.par.set("strip.background",sb)
-par(oma=c(0,1,1,0),mgp=c(3,1,.3))
 xyplot (Conc~Time | ID, data=plotPoolPK, 
                        layout=c(4,3),
                        aspect=1/1,
@@ -138,11 +133,6 @@ xyplot (Conc~Time | ID, data=plotPoolPK,
                            panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c(1,1,1), lty=c(2,1,1),pch=1, lwd=1.4,...)},
                        par.strip.text=list(cex=1.0))
 
-trellis.device(width=7, height=6.5,bg="transparent")
-sb <- trellis.par.get("strip.background")
-sb$col <- c(16,11,9,13,10,15,14) 
-trellis.par.set("strip.background",sb)
-par(oma=c(0,1,1,0),mgp=c(3,1,.3))
 xyplot (Conc~Time | ID, data=plotPoolPD,
                        layout=c(4,3),
                        aspect=1/1,

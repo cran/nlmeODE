@@ -48,13 +48,15 @@ TwoComp <- list(DiffEq=list(
 
 IndomethModel <- nlmeODE(TwoComp,Indometh)
 
-Indometh.nlme <- nlme(conc ~ IndomethModel(k12,k21,k10,start,time,Subject),
-   data = Indometh, fixed=k12+k21+k10+start~1, random = pdDiag(start+k12+k10~1), 
-   start=c(k12=-0.05,k21=-0.15,k10=-0.10,start=0.70),
-   control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
-   verbose=TRUE)
+#Remove '#' below to run the estimation
 
-plot(augPred(Indometh.nlme,level=0:1))
+#Indometh.nlme <- nlme(conc ~ IndomethModel(k12,k21,k10,start,time,Subject),
+#   data = Indometh, fixed=k12+k21+k10+start~1, random = pdDiag(start+k12+k10~1), 
+#   start=c(k12=-0.05,k21=-0.15,k10=-0.10,start=0.70),
+#   control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
+#   verbose=TRUE)
+
+#plot(augPred(Indometh.nlme,level=0:1))
 
 }
 \keyword{models}

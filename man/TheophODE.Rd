@@ -49,13 +49,15 @@ OneComp <- list(DiffEq=list(
                 
 TheophModel <- nlmeODE(OneComp,TheophODE)
 
-Theoph.nlme <- nlme(conc ~ TheophModel(ka,ke,CL,Time,Subject),
-   data = TheophODE, fixed=ka+ke+CL~1, random = pdDiag(ka+CL~1), 
-   start=c(ka=0.5,ke=-2.5,CL=-3.2),
-   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
-   verbose=TRUE)
+#Remove '#' below to run the estimation
 
-plot(augPred(Theoph.nlme,level=0:1))
+#Theoph.nlme <- nlme(conc ~ TheophModel(ka,ke,CL,Time,Subject),
+#   data = TheophODE, fixed=ka+ke+CL~1, random = pdDiag(ka+CL~1), 
+#   start=c(ka=0.5,ke=-2.5,CL=-3.2),
+#   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
+#   verbose=TRUE)
+
+#plot(augPred(Theoph.nlme,level=0:1))
 
 }
 \keyword{models}
