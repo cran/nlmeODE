@@ -150,7 +150,8 @@ if (JAC==TRUE){
         temp[[i]] <- deparse(deriv(model$DiffEq[[i]],model$States))
         number <- grep(".grad\\[,",temp[[i]]) 
         w <- grep("   \\.expr[0-9]+",temp[[i]])
-        name <- as.null(character())     
+        name <- as.null(character())
+    
         if(length(w)!=0){
             name <- character(length(w))
             expression <- character(length(w))
@@ -160,34 +161,49 @@ if (JAC==TRUE){
                 name[k] <- substring(temp[[i]][[w[k]]],first=pp[1],last=p[1]-2)
                 expression[k] <- substring(temp[[i]][[w[k]]],first=p[1]+attr(p,"match.length"),last=nchar(temp[[i]][[w[k]]]))
             }
+        
+
+            for(dummy in 1:10){
+                for(j in number){
+                    for(k in 1:length(w)){
+                        temp[[i]][[j]] <- gsub(name[k],paste("(",expression[k],")",sep=""),temp[[i]][[j]] )
+                    }
+                }
+            }
         }
+
         for(j in 1:length(number)){
             jacobi[[index]]<- temp[[i]][[number[j]]]
-            w <- -1
-            k <- 0
-            while(!is.null(name) & k<length(name) & w==-1){
-                k <- k + 1  
-                w <- regexpr(name[k],jacobi[[index]])
-            }
-            if(!is.null(name) & w!=-1){
-                jacobi[[index]] <- gsub(name[k],expression[k],jacobi[[index]])
-            }
             p <- regexpr("<-",jacobi[[index]])
             jacobi[[index]] <- substring(jacobi[[index]],first=p[1]+attr(p,"match.length")+1,last=nchar(jacobi[[index]]))
             index  <- index + 1
         }
     } 
     jacobi <- unlist(jacobi)
+    
     JACseq <- jacobi
-    for(i in 1:length(model$Parms)){
-        if (LogParms==TRUE){ 
-            jacobi <- gsub(model$Parms[i],paste("exp(p[\"",model$Parms[i],"\"])",sep=""),jacobi)
-        }else{
-            jacobi <- gsub(model$Parms[i],paste("p[\"",model$Parms[i],"\"]",sep=""),jacobi)   
-        }
-    }
+    #for(i in 1:length(model$Parms)){
+    #    if (LogParms==TRUE){ 
+    #        jacobi <- gsub(model$Parms[i],paste("exp(p[\"",model$Parms[i],"\"])",sep=""),jacobi)
+    #    }else{
+    #        jacobi <- gsub(model$Parms[i],paste("p[\"",model$Parms[i],"\"]",sep=""),jacobi)   
+    #    }
+    #}
 
     JACfunc <- function(t, y, p){
+    
+        for(i in 1:length(parmstate)){
+            if(i <= length(model$Parms)){
+                if (LogParms==TRUE){
+                    eval(parse(text=paste(parmstate[i],"<- exp(p[\"",parmstate[i],"\"])",sep="")) )
+                }else{
+                    eval(parse(text=paste(parmstate[i],"<- p[\"",parmstate[i],"\"]",sep="")) )      
+                }
+            }else{
+                eval(parse(text=paste(parmstate[i],"<- y[",i-length(model$Parms),"]",sep="")  ))
+            }
+        }
+      
         eval(parse(text=paste("c(",paste(jacobi,collapse=","),")")))
     }
 }else{
@@ -220,18 +236,18 @@ if(SEQ==TRUE){
                 name[k] <- substring(temp[[i]][[w[k]]],first=pp[1],last=p[1]-2)
                 expression[k] <- substring(temp[[i]][[w[k]]],first=p[1]+attr(p,"match.length"),last=nchar(temp[[i]][[w[k]]]))
             }
+        
+        
+            for(dummy in 1:10){
+                for(j in number){
+                    for(k in 1:length(w)){
+                    temp[[i]][[j]] <- gsub(name[k],paste("(",expression[k],")",sep=""),temp[[i]][[j]] )
+                }
+            }
         }
+    }
         for(j in 1:length(number)){
             dfdp[[index]]<- temp[[i]][[number[j]]]
-            w <- -1
-            k <- 0
-            while(!is.null(name) & k<length(name) & w==-1){
-                k <- k + 1  
-                w <- regexpr(name[k],dfdp[[index]])
-            }
-            if(!is.null(name) & w!=-1){
-                dfdp[[index]] <- gsub(name[k],expression[k],dfdp[[index]])
-            }
             p <- regexpr("<-",dfdp[[index]])
             dfdp[[index]] <- substring(dfdp[[index]],first=p[1]+attr(p,"match.length")+1,last=nchar(dfdp[[index]]))
             index  <- index + 1
@@ -311,17 +327,31 @@ if(JAC==TRUE & SEQ==TRUE){
     } 
     jacobi <- unlist(jacobi)
 
-    for(i in 1:length(model$Parms)){
-        if (LogParms==TRUE){ 
-            jacobi <- gsub(model$Parms[i],paste("exp(p[\"",model$Parms[i],"\"])",sep=""),jacobi)
-        }else{
-            jacobi <- gsub(model$Parms[i],paste("p[\"",model$Parms[i],"\"]",sep=""),jacobi)   
-        }
-    }
+#    for(i in 1:length(model$Parms)){
+#        if (LogParms==TRUE){ 
+#            jacobi <- gsub(model$Parms[i],paste("exp(p[\"",model$Parms[i],"\"])",sep=""),jacobi)
+#        }else{
+#            jacobi <- gsub(model$Parms[i],paste("p[\"",model$Parms[i],"\"]",sep=""),jacobi)   
+#        }
+#    }
 
     JACfunc <- function(t, y, p){
+    
+        for(i in 1:length(parmstate)){
+            if(i <= length(model$Parms)){
+                if (LogParms==TRUE){
+                    eval(parse(text=paste(parmstate[i],"<- exp(p[\"",parmstate[i],"\"])",sep="")) )
+                }else{
+                    eval(parse(text=paste(parmstate[i],"<- p[\"",parmstate[i],"\"]",sep="")) )      
+                }
+            }else{
+                eval(parse(text=paste(parmstate[i],"<- y[",i-length(model$Parms),"]",sep="")  ))
+            }
+        }
+    
         eval(parse(text=paste("c(",paste(jacobi,collapse=","),")")))
     }
+    
 }
 
 ##Differential equations
@@ -338,32 +368,54 @@ if(SEQ==TRUE){
     }   
 }
 
+BioState <- logical(NoS)
+BioParms <- logical(NoP)
+
+for(i in 1:length(model$Parms)){
+    if(length(grep(model$Parms[i],paste("F",1:NoS,sep="")))>0){
+        BioState[grep(model$Parms[i],paste("F",1:NoS,sep=""))] <- TRUE 
+        BioParms[grep(model$Parms[i],model$Parms)] <- TRUE   
+    }
+}
+
 for(i in 1:length(model$DiffEq)){
     temp <- as.character(rev(model$DiffEq[[i]]))[[1]]
 
-    for(j in 1:length(parmstate)){
+#    for(j in 1:length(parmstate)){
         #Parameters 
-        if(j <= length(model$Parms)){
+#        if(j <= length(model$Parms)){
             #Estimate Log(parameters) if LogParms==TRUE 
-            if (LogParms==TRUE){ 
-                temp <- gsub(parmstate[j],paste("exp(p[\"",parmstate[j],"\"])",sep=""),temp)
-            }else{
-                temp <- gsub(parmstate[j],paste("p[\"",parmstate[j],"\"]",sep=""),temp) 
-            }
+#            if (LogParms==TRUE){ 
+#                temp <- gsub(parmstate[j],paste("exp(p[\"",parmstate[j],"\"])",sep=""),temp)
+#            }else{
+#                temp <- gsub(parmstate[j],paste("p[\"",parmstate[j],"\"]",sep=""),temp) 
+#            }
         #States
-        }else{                        
-            temp <- gsub(parmstate[j],paste("y[",j-length(model$Parms),"]",sep=""),temp)
-        }
-    }
+#        }else{                        
+#            temp <- gsub(parmstate[j],paste("y[",j-length(model$Parms),"]",sep=""),temp)
+#        }
+#    }
     
     if(!is.null(DoseInfo$Rate) & Ucomp[i] == i){
         if(length(RatePlace)==0 & length(TcritPlace)==0 | LogParms==FALSE){
-            temp <- paste(temp," + p[\"Rate\"]*(t<=p[\"Tcrit\"])")
-        }else{              
-            if(length(TcritPlace)==0){
-                temp <- paste(temp," + exp(p[\"Rate\"])*(t<=p[\"Tcrit\"])")
+            if(BioState[i]){
+                temp <- paste(temp," + F",i,"*(t>=p[\"StartT\"])*p[\"Rate\"]*(t<=p[\"Tcrit\"])",sep="")
             }else{
-                temp <- paste(temp," + p[\"Rate\"]*(t<=exp(p[\"Tcrit\"]))")             
+                temp <- paste(temp," + (t>=p[\"StartT\"])*p[\"Rate\"]*(t<=p[\"Tcrit\"])")
+            }
+         }else{              
+            if(length(TcritPlace)==0){
+                if(BioState[i]){
+                    temp <- paste(temp," + F",i,"*(t>=p[\"StartT\"])*exp(p[\"Rate\"])*(t<=p[\"Tcrit\"])",sep="")                           
+                }else{
+                    temp <- paste(temp," + (t>=p[\"StartT\"])*exp(p[\"Rate\"])*(t<=p[\"Tcrit\"])")
+                }
+            }else{
+                if(BioState[i]){
+                    temp <- paste(temp," + F",i,"*(t>=p[\"StartT\"])*p[\"Rate\"]*(t<=exp(p[\"Tcrit\"]))",sep="")             
+                }else{
+                    temp <- paste(temp," + (t>=p[\"StartT\"])*p[\"Rate\"]*(t<=exp(p[\"Tcrit\"]))",sep="")             
+                }
             }
         }
     }
@@ -373,7 +425,7 @@ for(i in 1:length(model$DiffEq)){
 
     DiffParms <- logical(length(model$Parms))
     for(i in 1:length(DiffParms)){
-        if(length(grep(model$Parms[i],as.character(model$DiffEq)))>0){
+         if(length(grep(model$Parms[i],as.character(model$DiffEq)))>0){
             DiffParms[grep(model$Parms[i],model$Parms)] <- TRUE    
         }
     }
@@ -452,6 +504,17 @@ for(i in 1:length(model$DiffEq)){
    pkmodel <- function(t,y,p)
    {
         lsodaeq <- character(length(model$DiffEq))
+        for(i in 1:length(parmstate)){
+            if(i <= length(model$Parms)){
+                if (LogParms==TRUE){
+                    eval(parse(text=paste(parmstate[i],"<- exp(p[\"",parmstate[i],"\"])",sep="")) )
+                }else{
+                    eval(parse(text=paste(parmstate[i],"<- p[\"",parmstate[i],"\"]",sep="")) )      
+                }
+            }else{
+                eval(parse(text=paste(parmstate[i],"<- y[",i-length(model$Parms),"]",sep="")  ))
+            }
+        }
         for (i in 1:length(model$DiffEq)){
             eval(parse(text=paste("yd",i,"<-",rev(as.character(model$DiffEq[[i]]))[[1]], sep="")))
             lsodaeq[i]   <- paste("yd",i,sep="")
@@ -459,7 +522,6 @@ for(i in 1:length(model$DiffEq)){
       eval(parse(text=paste("list(c(",sep="",paste(lsodaeq,collapse=","),"))")))
    }
 
-#print(Info)
 #assign("funceval", 0, env = .GlobalEnv)
 
 ####Objects passed on to nlmeODE function below
@@ -480,7 +542,7 @@ for(i in 1:length(model$DiffEq)){
 # ObsStates     :   The observed states
 # Info          :   List object with information for each subject divided up into discontinuities
 # TcritPlace    :   Position of tcrit parameter in model$Parms
-
+# Ucomp         :   Compartments where a dose is entered
 ##Function used in nlme call
 
 function(...) {
@@ -536,11 +598,9 @@ function(...) {
     if(SEQ==TRUE){
        SEAll <- matrix(NA,nrow=length(Subject),ncol=NoP)
     }
-   
 
 ## Call lsoda for each subject       
 for(subj in unique(as.character(Subject))) {
-
    #Initial state estimates
     if(ninit > 0){
         if(SEQ==TRUE){
@@ -551,6 +611,7 @@ for(subj in unique(as.character(Subject))) {
         }else{
             InitVector <- Info[[subj]][[as.character(1)]]$Init
         }   
+
         if(LogParms==TRUE){
             for(i in 1:length(InitVector)){
                 if(sinit[i]){
@@ -585,9 +646,27 @@ for(subj in unique(as.character(Subject))) {
 
    #Parameter vector for lsoda call 
     lsodaparms <- vector("numeric",length(parameters))
+
     for (i in 1:length(parameters)){
-       lsodaparms[i] <- paste(model$Parms[i],"=",unique(parameters[[i]][subj==Subject]), sep="")
+       lsodaparms[i] <- paste(model$Parms[which(DiffParms)[i]],"=",unique(parameters[[i]][subj==Subject]), sep="")
     }
+
+    #Insert bioavailability
+    BioComb <- rep("1",length(BioState))
+
+    for(i in 1:length(BioState)){
+        if(BioState[i]){
+            BioNo <- grep(paste("F",i,sep=""),model$Parms)
+            if(LogParms){
+                eval(parse(text=paste("F",i,"<-",exp(unique(Parms[[BioNo]][subj==Subject])),sep="")))
+            }else{
+                eval(parse(text=paste("F",i,"<-",unique(Parms[[BioNo]][subj==Subject]),sep="")))                
+            }
+            BioComb[i] <- paste("F",i,sep="")
+        }    
+    }        
+
+    eval(parse(text=paste("BioComb <- ",paste("c(",paste(BioComb,sep="",collapse=","),")",sep=""))))
 
     #If there are multiple dosing in the time series
     if(!is.null(DoseInfo$Tcrit) & max(DoseInfo$Ndose[DoseInfo[,nameSubject]==subj])>1){
@@ -599,28 +678,29 @@ for(subj in unique(as.character(Subject))) {
             if (!is.null(Info[[subj]][[as.character(i)]]$Rate)){
                 #No estimation of infusion parameters
                 if(Info[[subj]][[as.character(i)]]$Rate>=0 & Info[[subj]][[as.character(i)]]$StartTime>=0){
-                    lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][[as.character(i)]]$Rate)
-                    lsodaparms[length(parameters)+2] <- paste("Tcrit=",Info[[subj]][[as.character(i)]]$Tcrit)
+                    lsodaparms[length(lsodaparms)+1] <- paste("Rate=",Info[[subj]][[as.character(i)]]$Rate)
+                    lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",Info[[subj]][[as.character(i)]]$Tcrit)
+                    lsodaparms[length(lsodaparms)+1] <- paste("StartT=",Info[[subj]][["1"]]$StartTime)
                 }else{
                     #After infusion stop
                     if(Info[[subj]][[as.character(i)]]$Rate==0){
                         if(length(RatePlace)>0){    #Estimation of Rate
                             lsodaparms[RatePlace] <- paste("Rate=",0)
-                            lsodaparms[length(parameters)+1] <- paste("Tcrit=",0) 
+                            lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",0) 
                         }else{                      #Estimation of Tcrit 
                             lsodaparms[TcritPlace] <- paste("Tcrit=",0)
-                            lsodaparms[length(parameters)+1] <- paste("Rate=",0)                            
+                            lsodaparms[length(lsodaparms)+1] <- paste("Rate=",0)                            
                         }
                     }
                     #Estimation of Rate
                     if(Info[[subj]][[as.character(i)]]$Rate==-1){
                         Info[[subj]][[as.character(i)]]$Tcrit <- Info[[subj]][[as.character(i)]]$StartTime + Info[[subj]][[as.character(i)]]$Dose / exp(unique(parameters[[RatePlace]][subj==Subject]))
-                        lsodaparms[length(parameters)+1] <- paste("Tcrit=",Info[[subj]][[as.character(i)]]$Tcrit) 
+                        lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",Info[[subj]][[as.character(i)]]$Tcrit) 
                     }
                     #Estimation of Tcrit
                     if(Info[[subj]][[as.character(i)]]$Rate==-2){
                         Info[[subj]][[as.character(i)]]$Rate <- Info[[subj]][[as.character(i)]]$Dose / (exp(unique(parameters[[TcritPlace]][subj==Subject])) - Info[[subj]][[as.character(i)]]$StartTime)
-                        lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][[as.character(i)]]$Rate)
+                        lsodaparms[length(lsodaparms)+1] <- paste("Rate=",Info[[subj]][[as.character(i)]]$Rate)
                         Info[[subj]][[as.character(i)]]$Tcrit <- exp(unique(parameters[[TcritPlace]][subj==Subject]))
                     }                   
                 }
@@ -628,31 +708,60 @@ for(subj in unique(as.character(Subject))) {
                       
             #First time series without discontinuities
             if(i==1){
-                xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init,
+                if(is.null(nameType)){
+                    xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init*BioComb,
                         Time[subj == Subject & Time <= Info[[subj]][[as.character(i+1)]]$StartTime], 
                         pkmodel,
                         tcrit=Info[[subj]][[as.character(i+1)]]$StartTime, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))), 
                         #tcrit=Info[[subj]][[as.character(i)]]$Tcrit, 
                         rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
+                }else{
+                    xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init*BioComb,
+                        Time[subj == Subject & Time <= Info[[subj]][[as.character(i+1)]]$StartTime & Type==1], 
+                        pkmodel,
+                        tcrit=Info[[subj]][[as.character(i+1)]]$StartTime, 
+                        parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))), 
+                        #tcrit=Info[[subj]][[as.character(i)]]$Tcrit, 
+                        rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
+                }
             }else{  
             #Remaining time series divided up into discontinuities
                 #If final part of time series then tcrit = max(time)
                 if(i!=length(Info[[subj]])){
-                    xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init,
-                        Time[subj == Subject & Time >= Info[[subj]][[as.character(i)]]$StartTime & Time <= Info[[subj]][[as.character(i+1)]]$StartTime],
-                        pkmodel, 
-                        tcrit=Info[[subj]][[as.character(i+1)]]$StartTime,
-                        parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
-                        rtol=rtol, atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)  
+                    if(is.null(nameType)){
+                        xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init*BioComb,
+                            Time[subj == Subject & Time >= Info[[subj]][[as.character(i)]]$StartTime & Time <= Info[[subj]][[as.character(i+1)]]$StartTime],
+                            pkmodel, 
+                            tcrit=Info[[subj]][[as.character(i+1)]]$StartTime,
+                            parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
+                            rtol=rtol, atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)  
+                    }else{
+                        xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init*BioComb,
+                            Time[subj == Subject & Time >= Info[[subj]][[as.character(i)]]$StartTime & Time <= Info[[subj]][[as.character(i+1)]]$StartTime & Type==1],
+                            pkmodel, 
+                            tcrit=Info[[subj]][[as.character(i+1)]]$StartTime,
+                            parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
+                            rtol=rtol, atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)                      
+                    }
                 }else{
-                    xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init,
-                        Time[subj == Subject & Time >= Info[[subj]][[as.character(i)]]$StartTime],
-                        pkmodel, 
-                        parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
-                        #tcrit=max(data[,nameTime]),
-                        #tcrit=Info[[subj]][[as.character(i)]]$Tcrit,
-                        rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)  
+                    if(is.null(nameType)){
+                        xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init*BioComb,
+                            Time[subj == Subject & Time >= Info[[subj]][[as.character(i)]]$StartTime],
+                            pkmodel, 
+                            parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
+                            #tcrit=max(data[,nameTime]),
+                            #tcrit=Info[[subj]][[as.character(i)]]$Tcrit,
+                            rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
+                    }else{
+                        xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init*BioComb,
+                            Time[subj == Subject & Time >= Info[[subj]][[as.character(i)]]$StartTime & Type==1],
+                            pkmodel, 
+                            parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
+                            #tcrit=max(data[,nameTime]),
+                            #tcrit=Info[[subj]][[as.character(i)]]$Tcrit,
+                            rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)                    
+                    }  
                 }
                     TimeBefore <- rev(Time[subj == Subject & Time <= Info[[subj]][[as.character(i)]]$StartTime])[1]
                     if(i!=length(Info[[subj]])){
@@ -700,25 +809,25 @@ for(subj in unique(as.character(Subject))) {
             if (!is.null(Info[[subj]][["1"]]$Rate)){
                 #No estimation of infusion parameters
                 if(Info[[subj]][["1"]]$Rate>=0 & Info[[subj]][["1"]]$StartTime>=0){
-                    lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
-                    lsodaparms[length(parameters)+2] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit)
+                    lsodaparms[length(lsodaparms)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
+                    lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit)
+                    lsodaparms[length(lsodaparms)+1] <- paste("StartT=",Info[[subj]][["1"]]$StartTime)
                 }else{
                     #Estimation of Rate
                     if(Info[[subj]][["1"]]$Rate==-1){
                         Info[[subj]][["1"]]$Tcrit <- Info[[subj]][["1"]]$StartTime + Info[[subj]][["1"]]$Dose / exp(unique(parameters[[RatePlace]][subj==Subject]))
-                        lsodaparms[length(parameters)+1] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit) 
+                        lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit) 
                     }
                     #Estimation of Tcrit
                     if(Info[[subj]][["1"]]$Rate==-2){
                         Info[[subj]][["1"]]$Rate <- Info[[subj]][["1"]]$Dose / (exp(unique(parameters[[TcritPlace]][subj==Subject])) - Info[[subj]][["1"]]$StartTime)
-                        lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
+                        lsodaparms[length(lsodaparms)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
                         Info[[subj]][["1"]]$Tcrit <- exp(unique(parameters[[TcritPlace]][subj==Subject]))
                     }                   
                 }
             }
-
         if(is.null(nameType)){
-            x  <-    lsoda(Info[[subj]][["1"]]$Init, Time[subj == Subject], pkmodel, 
+            x  <-    lsoda(Info[[subj]][["1"]]$Init*BioComb, Time[subj == Subject], pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
                         rtol=rtol,atol=atol,jac=JACfunc,tcrit=tcrit,hmin=hmin,hmax=hmax)
 
@@ -728,16 +837,16 @@ for(subj in unique(as.character(Subject))) {
             }
                        
         }else{
-            x   <-   lsoda(Info[[subj]][["1"]]$Init, Time[subj == Subject & Type==1], pkmodel, 
+            x   <-   lsoda(Info[[subj]][["1"]]$Init*BioComb, Time[subj == Subject & Type==1], pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
                         rtol=rtol,atol=atol,jac=JACfunc,tcrit=tcrit,hmin=hmin,hmax=hmax)
         }
         
     }
 
+
     #Divide x with the scaling parameters
     FirstTime <- TRUE
-    
     for(i in 1:length(Scale)){
         if(ObsStates[i]){
             if(FirstTime){

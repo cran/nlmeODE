@@ -1,6 +1,6 @@
 Package: nlmeODE
-Version: 0.2-3
-Date: 2003/11/22
+Version: 0.2-4
+Date: 2004/01/06
 Title: Non-linear mixed-effects modelling in nlme using differential equations
 Author: Christoffer W. Tornoe <christoffer.tornoe@ferring.com>
 Maintainer: Christoffer W. Tornoe <christoffer.tornoe@ferring.com>
