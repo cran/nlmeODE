@@ -2,7 +2,7 @@
 #    nlmeODE Function     #
 ###########################
 
-nlmeODE <- function(model,data,LogParms=TRUE,JAC=TRUE,SEQ=FALSE,rtol=0.01,atol=0.01)
+nlmeODE <- function(model,data,LogParms=TRUE,JAC=TRUE,SEQ=FALSE,rtol=0.01,atol=0.01,tcrit=NULL,hmin=0,hmax=Inf)
 {   
 
 #Get formula from groupedData object data
@@ -350,7 +350,7 @@ for(i in 1:length(model$DiffEq)){
             }else{
                 temp <- gsub(parmstate[j],paste("p[\"",parmstate[j],"\"]",sep=""),temp) 
             }
-        #States               
+        #States
         }else{                        
             temp <- gsub(parmstate[j],paste("y[",j-length(model$Parms),"]",sep=""),temp)
         }
@@ -625,7 +625,7 @@ for(subj in unique(as.character(Subject))) {
                     }                   
                 }
             }
-
+                      
             #First time series without discontinuities
             if(i==1){
                 xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init,
@@ -634,7 +634,7 @@ for(subj in unique(as.character(Subject))) {
                         tcrit=Info[[subj]][[as.character(i+1)]]$StartTime, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))), 
                         #tcrit=Info[[subj]][[as.character(i)]]$Tcrit, 
-                        rtol=rtol,atol=atol,jac=JACfunc)
+                        rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
             }else{  
             #Remaining time series divided up into discontinuities
                 #If final part of time series then tcrit = max(time)
@@ -644,7 +644,7 @@ for(subj in unique(as.character(Subject))) {
                         pkmodel, 
                         tcrit=Info[[subj]][[as.character(i+1)]]$StartTime,
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
-                        rtol=rtol, atol=atol,jac=JACfunc)  
+                        rtol=rtol, atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)  
                 }else{
                     xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init,
                         Time[subj == Subject & Time >= Info[[subj]][[as.character(i)]]$StartTime],
@@ -652,7 +652,7 @@ for(subj in unique(as.character(Subject))) {
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
                         #tcrit=max(data[,nameTime]),
                         #tcrit=Info[[subj]][[as.character(i)]]$Tcrit,
-                        rtol=rtol, atol=atol,jac=JACfunc)  
+                        rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)  
                 }
                     TimeBefore <- rev(Time[subj == Subject & Time <= Info[[subj]][[as.character(i)]]$StartTime])[1]
                     if(i!=length(Info[[subj]])){
@@ -720,9 +720,8 @@ for(subj in unique(as.character(Subject))) {
         if(is.null(nameType)){
             x  <-    lsoda(Info[[subj]][["1"]]$Init, Time[subj == Subject], pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
-                        #tcrit=max(data[,nameTime]),
-                        rtol=rtol,atol=atol,jac=JACfunc)
-                        
+                        rtol=rtol,atol=atol,jac=JACfunc,tcrit=tcrit,hmin=hmin,hmax=hmax)
+
             if(SEQ==TRUE){
                 SEAll[subj==Subject,] <- x[,c(FALSE,rep(FALSE,length(ObsStates)),rep(ObsStates,each=NoP)),drop=FALSE]
                 x <- x[,c(TRUE,rep(TRUE,length(ObsStates)),rep(FALSE,(NoS*NoP))),drop=FALSE]
@@ -731,8 +730,7 @@ for(subj in unique(as.character(Subject))) {
         }else{
             x   <-   lsoda(Info[[subj]][["1"]]$Init, Time[subj == Subject & Type==1], pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
-                        #tcrit=max(data[,nameTime]),
-                        rtol=rtol,atol=atol,jac=JACfunc)
+                        rtol=rtol,atol=atol,jac=JACfunc,tcrit=tcrit,hmin=hmin,hmax=hmax)
         }
         
     }

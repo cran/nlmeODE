@@ -5,7 +5,7 @@
   packages for mixed-effects modelling.
 }
 \usage{
-nlmeODE(model,data,LogParms,JAC,SEQ,rtol,atol)
+nlmeODE(model,data,LogParms,JAC,SEQ,rtol,atol,tcrit,hmin,hmax)
 }
 \arguments{
 \item{model}{A list including the following elements:
@@ -27,6 +27,9 @@ supplying the Jacobian can speed up the computations if the system is stiff. Def
 by simultaneous solution of the sensitivity equations associated with the system of ODE's. Default is FALSE.}
 \item{rtol}{Relative error tolerance for lsoda. Default is 0.01.}
 \item{atol}{Absolute error tolerance for lsoda. Default is 0.01.}
+\item{tcrit}{Time beyond which the integration should not proceed. Default is NULL.}
+\item{hmin}{Minimum value of the integration stepsize. Default is 0.}
+\item{hmax}{Maximum value of the integration stepsize. Default is Inf.}
 }
 \value{
   A function compatible with \code{nlme} estimation for systems of ordinary differential equations (ODE's).

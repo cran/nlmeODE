@@ -16,7 +16,7 @@
     \item{\code{Time}}{A numeric vector giving the time since drug administration (hours)}
     \item{\code{Dose}}{A numeric vector giving the dose amount (mg)}
     \item{\code{Cmt}}{A numeric vector giving the dosing compartment}
-    \item{\code{Type}}{A character vector specifying whether it is PK or PD observations}
+    \item{\code{Type}}{A factor specifying whether it is PK (Type=1) or PD (Type=2) observations}
     \item{\code{Conc}}{A numeric vector giving the PK and PD concentration in the plasma (ng/mL)}
   }
 }
