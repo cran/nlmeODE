@@ -6,16 +6,14 @@
    pharmacokinetics of indomethacin.
 }
 \format{
-  This data frame contains the following columns:
+  The \code{Indometh} data frame contains the following columns:
   \describe{
-     \item{\code{Subject}}{an ordered factor with containing the subject codes.  The
-          ordering is according to increasing maximum response.}
-
-     \item{\code{time}}{a numeric vector of times at which blood samples were drawn
-          (hr).}
-
-     \item{\code{conc}}{a numeric vector of plasma concentrations of indomethacin
-          (mcg/ml).}
+    \item{\code{Subject}}{an ordered factor with containing the subject
+      codes.  The ordering is according to increasing maximum response.}
+    \item{\code{time}}{a numeric vector of times at which blood samples
+      were drawn (hr).}
+    \item{\code{conc}}{a numeric vector of plasma concentrations of
+      indomethacin (mcg/ml).}
   }
 }
 \details{
@@ -40,11 +38,13 @@ data(Indometh)
 TwoComp <- list(DiffEq=list(                         #Differential equations
                     dy1dt = ~ -(k12+k10)*y1+k21*y2 ,    #Compartment 1
                     dy2dt = ~ -k21*y2 + k12*y1),        #Compartment 2
-                ObsEq= ~ y1,                         #Observation equation  
+                ObsEq=list(                          #Observation equation
+                    c1 = ~ y1,
+                    c2 = ~ 0),                           
                 States=c("y1","y2"),                 #The names of the states in the sequence of DiffEq
                 Parms=c("k12","k21","k10","start"),  #Parameter names
                 LogParms=TRUE,                       #Estimate the logarithm of the parameters 
-                Init=c(TRUE,FALSE),                  #Estimate the Initial states  
+                Init=list("start",0),                   #Estimate the Initial states  
                 JAC=TRUE,                            #Use the Jacobian             
                 SEQ=FALSE)                           #Use sensitivity equations    
 
@@ -53,8 +53,8 @@ IndomethModel <- nlmeODE(TwoComp,Indometh)
 
 Indometh.nlme <- nlme(conc ~ IndomethModel(k12,k21,k10,start,time,Subject),
    data = Indometh, fixed=k12+k21+k10+start~1, random = pdDiag(start+k12+k10~1), 
-   start=c(k12=-0.06,k21=-0.3,k10=-0.15,start=2),
-   control=list(msVerbose = TRUE,tolerance=1e-3,pnlsTol=0.1,msTol=1e-3))
+   start=c(k12=-0.05,k21=-0.15,k10=-0.10,start=0.70),
+   control=list(msVerbose = TRUE))
 
 plot(augPred(Indometh.nlme,level=0:1))
 

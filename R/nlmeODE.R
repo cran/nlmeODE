@@ -13,21 +13,39 @@ nameTime <- as.character(nameData[[3]][[2]])
 
 #Name of grouping factor
 nameSubject <- as.character(nameData[[3]][[3]])
+    if(length(nameSubject)>1){
+        nameType <- as.character(nameData[[3]][[3]][[3]])
+        nameSubject <- as.character(nameData[[3]][[3]][[2]])
+    }else{
+        nameType <- as.null(character())
+    }
 
 #Number of states
 NoS <- length(model$States)
 
-#Number of parameters
+#Number of parameters #Attention: Should be made more general!
 NoP <- length(model$Parms)
 if(regexpr("/",rev(as.character(model$ObsEq))[1])!=-1){
     NoP <- NoP-1
 }
 
 #Number of initial state estimates
-ninit <- sum(model$Init==TRUE)
+ninit <- 0
+sinit <- logical(length(model$Init))
 InitParms <- logical(length(model$Parms))
-InitParms[ninit:0] <- TRUE
-InitParms <- rev(InitParms)
+
+for(i in 1:length(model$Init)){
+    ninit <- ninit + as.numeric(model$Init[[i]]!=0)     #Number of initial states
+    sinit[i] <- !is.numeric(model$Init[[i]])            #Initial states as a string
+    if(sinit[i]){        
+        for(j in 1:length(model$Parms)){
+            parm <- regexpr(model$Parms[j],as.character(model$Init[[i]]))
+            if(parm!=-1){
+                InitParms[j] <- TRUE
+            }
+        }
+    }
+}
 
 if (is.null(data[,nameTime])){stop(paste("The data does not contain a",nameTime,"column"))}
 if (is.null(data[,nameSubject])){stop(paste("The data does not contain a",nameSubject,"column"))}
@@ -45,10 +63,12 @@ if (is.null(data$Dose)){
             InitVector <- rep(0,length(model$States))
         }
         DoseSubj <- DoseInfo[DoseInfo[,nameSubject]==i,]
-        Info[[i]][["1"]] <- list(Init=InitVector,Tcrit=rev(data[,nameTime][i==as.character(data[,nameSubject])])[1])
+        Info[[i]][["1"]] <- list(Init=InitVector,Tcrit=NULL)
+        #rev(data[,nameTime][i==as.character(data[,nameSubject])])[1]
     }
 }else{
     DoseInfo <- as.data.frame(data[data$Dose!=0,,drop=FALSE])
+
     #Unique compartments with dosing
     Ucomp <- numeric(length(model$States))
     Ucomp[sort(unique(DoseInfo$Cmt))[1]:length(sort(unique(DoseInfo$Cmt)))]  <- sort(unique(DoseInfo$Cmt))
@@ -62,31 +82,34 @@ if (is.null(data$Dose)){
                 DoseInfo$Tcrit[i] <- DoseInfo[i,nameTime] + DoseInfo$Dose[i] / DoseInfo$Rate[i]
             }
         }
-        
+
         #Find rate/tcrit parameter in model$parms for estimation of rate/time of infusion
         RatePlace <- grep("Rate",model$Parms)
         TcritPlace <- grep("Tcrit",model$Parms)
         
         if(dim(DoseInfo)[1] > length(unique(data[,nameSubject]))){
             
-            for(i in unique(DoseInfo[,nameSubject])){
+            for(i in unique(as.character(DoseInfo[,nameSubject]))){
                 SubjDose <- DoseInfo[DoseInfo[,nameSubject]==i,,drop=FALSE]
                 MultDose <- DoseInfo[DoseInfo[,nameSubject]==i & DoseInfo[,nameTime]!=0,,drop=FALSE]
+                
+                #Insert time periods in between discontinuities
+                if(dim(MultDose)[1]>0){
+                    for(j in 1:dim(MultDose)[1]){
+                        MultDose$Tcrit[j] <- MultDose[j,nameTime]
+                        MultDose[j,nameTime] <- SubjDose$Tcrit[j]
+                        MultDose$Dose[j] <- 0
+                        MultDose$Rate[j] <- 0
+                    }
 
-                for(j in 1:dim(MultDose)[1]){
-                    MultDose$Tcrit[j] <- MultDose$Time[j]
-                    MultDose$Time[j] <- SubjDose$Tcrit[j]
-                    MultDose$Dose[j] <- 0
-                    MultDose$Rate[j] <- 0
+                    #Remove rows where Tcrit < Dose Time
+                    if(length(RatePlace)==0 & length(TcritPlace)==0){
+                        MultDose <- MultDose[MultDose$Tcrit>MultDose[,nameTime],]
+                    }
+                    DoseInfo <- rbind(DoseInfo, MultDose)
                 }
-
-                #Remove rows where Tcrit < Dose Time
-                if(length(RatePlace)==0 & length(TcritPlace)==0){
-                    MultDose <- MultDose[MultDose$Tcrit>MultDose$Time,]
-                }
-                DoseInfo <- rbind(DoseInfo, MultDose)
             }
-            
+
             DoseInfo <- DoseInfo[order(DoseInfo$Tcrit),]
             DoseInfo <- DoseInfo[order(as.numeric(as.character(DoseInfo[,nameSubject]))),]
 
@@ -110,19 +133,29 @@ if (is.null(data$Dose)){
             InitVector <- rep(0,length(model$States)+NoS*NoP)          
         }else{
             InitVector <- rep(0,length(model$States))
+            for(j in 1:length(model$Init)){
+                if(is.numeric(model$Init[[j]])){
+                    InitVector[j] <- model$Init[[j]] 
+                }
+            }
         }
-        DoseSubj <- DoseInfo[DoseInfo[,nameSubject]==i,]
+
+        DoseSubj <- DoseInfo[i==as.character(DoseInfo[,nameSubject]),]
 
         if(is.null(DoseInfo$Rate)){
             for(j in 1:(dim(DoseSubj)[1])){
-                InitVector[DoseSubj$Cmt[j]] <- DoseSubj$Dose[j]
+                if(j==1){
+                    InitVector[DoseSubj$Cmt[j]] <- InitVector[DoseSubj$Cmt[j]] + DoseSubj$Dose[j]
+                }else{
+                    InitVector[DoseSubj$Cmt[j]] <- DoseSubj$Dose[j]
+                }
                 if(j < dim(DoseSubj)[1]){
-                Info[[i]][[as.character(j)]] <- list(Init=InitVector,Tcrit=DoseSubj$Tcrit[j+1])
+                    Info[[i]][[as.character(j)]] <- list(Init=InitVector,Tcrit=DoseSubj$Tcrit[j+1])
                 }else{ 
-                Info[[i]][[as.character(j)]] <- list(Init=InitVector,Tcrit=rev(data[,nameTime][i==as.character(data[,nameSubject])])[1])
+                    Info[[i]][[as.character(j)]] <- list(Init=InitVector,Tcrit=rev(data[,nameTime][i==as.character(data[,nameSubject])])[1])
                 }
             }
-        }else{
+        }else{      
             for(j in 1:(dim(DoseSubj)[1]+1)){             
                 if(j <= dim(DoseSubj)[1]){
                     Info[[i]][[as.character(j)]] <- 
@@ -132,12 +165,14 @@ if (is.null(data$Dose)){
                             StartTime = DoseSubj[j,nameTime],
                             Dose = DoseSubj$Dose[j])
                 }else{ 
+                    if(rev(data[,nameTime][i==as.character(data[,nameSubject])])[1]>DoseSubj$Tcrit[j-1]){
                         Info[[i]][[as.character(j)]] <- 
                             list(   Init=InitVector,
                                     Tcrit=rev(data[,nameTime][i==as.character(data[,nameSubject])])[1],
                                     Rate=0, 
                                     StartTime = DoseSubj$Tcrit[j-1],
                                     Dose = 0)
+                    }
                 }
             }
         }
@@ -383,49 +418,74 @@ for(i in 1:length(model$DiffEq)){
     }
 
     ##Scaling parameters
-    Scales <- rev(as.character(model$ObsEq))[1]
-    placeDiv <- regexpr("/",Scales) 
-    placeMult <- regexpr("\\*",Scales)
+    ObsEq <- as.character(model$ObsEq)
+    
+    Scales <- list()
+    ScaleDiv <- list()
+    ScaleMult <- list()
+    ScaleParms <- list()
 
-    if(placeDiv==-1 & placeMult==-1){
-        Scales <- as.null(Scales)    
-    }else{
-        if(placeDiv!=-1){
-            if(placeMult!=-1){
-                if(placeDiv<placeMult){
-                    ScaleDiv <- substring(Scales,first=placeDiv[1]+1,last=placeMult[1]-2)        
-                    ScaleMult <- substring(Scales,first=placeMult[1]+2,last=nchar(Scales))
-                    ScaleParms <- c(ScaleDiv,ScaleMult)
+    for(i in 1:length(ObsEq)){
+        if(ObsEq[[i]]!="~0"){
+            Scales[[i]] <- ObsEq[[i]]
+            placeDiv <- regexpr("/",Scales[[i]]) 
+            placeMult <- regexpr("\\*",Scales[[i]])
+        }else{
+            placeDiv <- -1
+            placeMult <- -1
+        }
+
+        if(placeDiv!=-1 | placeMult!=-1){
+            if(placeDiv!=-1){
+                if(placeMult!=-1){
+                    if(placeDiv<placeMult){
+                        ScaleDiv[[i]] <- substring(Scales[[i]],first=placeDiv[1]+1,last=placeMult[1]-2)        
+                        ScaleMult[[i]] <- substring(Scales[[i]],first=placeMult[1]+2,last=nchar(Scales[[i]]))
+                        ScaleParms[[i]] <- c(ScaleDiv[[i]],ScaleMult[[i]])
+                    }else{
+                        ScaleDiv[[i]] <- substring(Scales[[i]],first=placeDiv[1]+1,last=nchar(Scales[[i]]))
+                        ScaleMult[[i]] <- substring(Scales[[i]],first=placeMult[1]+2,last=placeDiv[1]-1) 
+                        ScaleParms[[i]] <- c(ScaleDiv[[i]],ScaleMult[[i]])
+                    }
                 }else{
-                    ScaleDiv <- substring(Scales,first=placeDiv[1]+1,last=nchar(Scales))
-                    ScaleMult <- substring(Scales,first=placeMult[1]+2,last=placeDiv[1]-1) 
-                    ScaleParms <- c(ScaleDiv,ScaleMult)
+                    ScaleDiv[[i]] <- substring(Scales[[i]],first=placeDiv[1]+1,last=nchar(Scales[[i]]))
+                    ScaleMult[[i]] <- as.null(ScaleDiv[[i]])
+                    ScaleParms[[i]] <- c(ScaleDiv[[i]])
                 }
             }else{
-                ScaleDiv <- substring(Scales,first=placeDiv[1]+1,last=nchar(Scales))
-                ScaleMult <- as.null(ScaleDiv)
-                ScaleParms <- c(ScaleDiv,ScaleMult)
+                ScaleMult[[i]] <- substring(Scales[[i]],first=placeMult[1]+2,last=nchar(Scales[[i]]))
+                ScaleDiv[[i]] <- as.null(ScaleMult[[i]])
+                ScaleParms[[i]] <- c(ScaleMult[[i]])
             }
-        }else{
-            ScaleMult <- substring(Scales,first=placeMult[1]+2,last=nchar(Scales))
-            ScaleDiv <- as.null(ScaleMult)
-            ScaleParms <- c(ScaleDiv,ScaleMult)
-        }
         
-        ObsParms  <- logical(length(model$Parms))
-        for(i in 1:length(ObsParms)){
-            ObsParms[grep(ScaleParms[i],model$Parms)] <- TRUE
+            ObsParms  <- logical(length(model$Parms))
+            for(j in 1:length(ObsParms)){
+                ObsParms[grep(ScaleParms[[i]][j],model$Parms)] <- TRUE
+            }        
+        }else{
+            Scales[[i]]     <- as.null()
+            ScaleMult[[i]]  <- as.null()
+            ScaleDiv[[i]]   <- as.null()
+            ScaleParms[[i]] <- as.null()
         }        
     }
+    Scales[[length(ObsEq)+1]]     <- 0
+    ScaleMult[[length(ObsEq)+1]]  <- 0
+    ScaleDiv[[length(ObsEq)+1]]   <- 0
+    ScaleParms[[length(ObsEq)+1]] <- 0
+    
+    Scales <- Scales[-(length(ObsEq)+1)]   
+    ScaleMult <- ScaleMult[-(length(ObsEq)+1)]   
+    ScaleDiv <- ScaleDiv[-(length(ObsEq)+1)]   
+    ScaleParms <- ScaleParms[-(length(ObsEq)+1)]   
+            
+    if(length(Scales)==0){Scales <- list(NULL)}
 
     ##Observation equation
-      temp <- as.character(rev(model$ObsEq))[[1]]
-      w <- vector("numeric",length(model$States))
-      for(i in 1:length(model$States)){
-        w[i]<- regexpr(model$States[i],temp)
+      ObsStates <- logical(length(model$States))
+      for(i in 1:length(ObsEq)){
+        ObsStates[i]<- regexpr(model$States[i],ObsEq[[i]])!=-1
       }
-      if(sum(w>0)>1){stop("Too many observation equations")}
-      model$ObsEq <- w>0
 
    ##PKmodel
    pkmodel <- function(t,y,p)
@@ -438,6 +498,9 @@ for(i in 1:length(model$DiffEq)){
       eval(parse(text=paste("list(c(",sep="",paste(lsodaeq,collapse=","),"))")))
    }
 
+#print(Info)
+#assign("funceval", 0, env = .GlobalEnv)
+
 ####Objects passed on to nlmeODE function below
 # DoseInfo      :   Data.frame with dosing information
 # JACfunc       :   Jacobian function
@@ -446,8 +509,6 @@ for(i in 1:length(model$DiffEq)){
 # NoP           :   Number of parameters
 # NoS           :   Number of states
 # pkmodel       :   Model function
-# placeDiv      :   Is there a '/' in model$ObsEq and where is it
-# placeMult     :   Is there a '*' in model$ObsEq and where is it
 # RatePlace     :   Position of rate parameter in model$Parms
 # Scales        :   if NULL then no scaling parameter
 # ScaleDiv      :   Scaling parameter
@@ -455,6 +516,7 @@ for(i in 1:length(model$DiffEq)){
 # DiffParms     :   Parameters in differential equations
 # InitParms     :   Initial parameters
 # ObsParms      :   Parameters in observation equations
+# ObsStates     :   The observed states
 # Info          :   List object with information for each subject divided up into discontinuities
 # TcritPlace    :   Position of tcrit parameter in model$Parms
 
@@ -463,50 +525,62 @@ for(i in 1:length(model$DiffEq)){
 function(...) {
 
     Input <- list(...)
-    Parms <- Input[1:(length(Input)-2)]
-    Time <- unlist(Input[[(length(Input)-1)]])
-    Subject <- unlist(Input[[length(Input)]])
+
+    if(is.null(nameType)){
+        Parms   <- Input[1:(length(Input)-2)]
+        Time    <- Input[[(length(Input)-1)]]
+        Subject <- Input[[length(Input)]]
+    }else{
+        Parms   <- Input[1:(length(Input)-3)]
+        Time    <- Input[[(length(Input)-2)]]
+        Subject <- Input[[length(Input)-1]]
+        Type    <- Input[[length(Input)]]
+    }
 
     #Remove scaling and initial parameters from Parms if existing 
     Initial    <- Parms[InitParms]
     parameters <- Parms[DiffParms]
+    Scale <- list()
 
-    if(!is.null(Scales)){
-        if(!is.null(ScaleDiv)){
-            if(!is.null(ScaleMult)){
-                if(model$LogParms==TRUE){
-                    Scale  <- exp(unlist(Parms[grep(ScaleMult,model$Parms)]))/exp(unlist(Parms[grep(ScaleDiv,model$Parms)]))
+    for(i in 1:length(Scales)){
+        if(!is.null(Scales[[i]])){
+            if(!is.null(ScaleDiv[[i]])){
+                if(!is.null(ScaleMult[[i]])){
+                    if(model$LogParms==TRUE){
+                        Scale[[i]]  <- exp(unlist(Parms[grep(ScaleMult[[i]],model$Parms)]))/exp(unlist(Parms[grep(ScaleDiv[[i]],model$Parms)]))
+                    }else{
+                        Scale[[i]]  <- unlist(Parms[grep(ScaleMult[[i]],model$Parms)])/unlist(Parms[grep(ScaleDiv[[i]],model$Parms)])
+                    }
                 }else{
-                    Scale  <- unlist(Parms[grep(ScaleMult,model$Parms)])/unlist(Parms[grep(ScaleDiv,model$Parms)])
+                    if(model$LogParms==TRUE){
+                        Scale[[i]]  <- 1/exp(unlist(Parms[grep(ScaleDiv[[i]],model$Parms)]))
+                    }else{
+                        Scale[[i]]  <- 1/unlist(Parms[grep(ScaleDiv[[i]],model$Parms)])                
+                    }
                 }
-            }else{
-                if(model$LogParms==TRUE){
-                    Scale  <- 1/exp(unlist(Parms[grep(ScaleDiv,model$Parms)]))
+            }else{ #Attention: Problem if ObsParms is for multiple response models
+                if(model$LogParms==TRUE){   
+                    Scale[[i]]  <- exp(unlist(Parms[ObsParms]))
                 }else{
-                    Scale  <- 1/unlist(Parms[grep(ScaleDiv,model$Parms)])                
+                    Scale[[i]]  <- unlist(Parms[ObsParms])            
                 }
             }
         }else{
-            if(model$LogParms==TRUE){
-                Scale  <- exp(unlist(Parms[ObsParms]))
-            }else{
-                Scale  <- unlist(Parms[ObsParms])            
-            }
+            Scale[[i]] <- rep(1,length(Subject))
         }
-    }else{
-        Scale <- rep(1,length(Subject))
     }       
 
     z <- rep(NA,length(Subject))
     if(model$SEQ==TRUE){
-        SEAll <- matrix(NA,nrow=length(Subject),ncol=NoP)
+       SEAll <- matrix(NA,nrow=length(Subject),ncol=NoP)
     }
+   
 
 ## Call lsoda for each subject       
 for(subj in unique(as.character(Subject))) {
 
    #Initial state estimates
-   if(ninit > 0){
+    if(ninit > 0){
         if(model$SEQ==TRUE){
             InitVector <- Info[[subj]][[as.character(1)]]$Init
             for(i in 1:(NoS*NoP)){
@@ -515,8 +589,36 @@ for(subj in unique(as.character(Subject))) {
         }else{
             InitVector <- Info[[subj]][[as.character(1)]]$Init
         }   
-        InitVector[model$Init] <- unlist(unique(Initial[[1:ninit]][subj==Subject]))
-        Info[[subj]][[as.character(1)]]$Init <- InitVector          
+        if(model$LogParms==TRUE){
+            for(i in 1:length(InitVector)){
+                if(sinit[i]){
+                    nInitial <- 1
+                    for(j in 1:length(InitParms)){
+                        if(InitParms[j]){
+                            eval(parse(text=paste(model$Parms[j],"<-",exp(unlist(unique(Initial[[nInitial]][subj==Subject]))))))
+                            nInitial <- nInitial + 1 
+                        }
+                    }
+
+                    InitVector[i] <- eval(parse(text=model$Init[[i]]))
+                }
+            }
+        }else{
+            for(i in 1:length(InitVector)){
+                if(sinit[i]){
+                    nInitial <- 1
+                    for(j in 1:length(InitParms)){
+                        if(InitParms[j]){
+                            eval(parse(text=paste(model$Parms[j],"<-",unlist(unique(Initial[[nInitial]][subj==Subject])))))
+                            nInitial <- nInitial + 1
+                        }
+                    }
+
+                    InitVector[i] <- eval(parse(text=model$Init[[i]]))
+                }
+            }      
+        }
+        Info[[subj]][[as.character(1)]]$Init <- InitVector         
     }
 
    #Parameter vector for lsoda call 
@@ -525,9 +627,10 @@ for(subj in unique(as.character(Subject))) {
        lsodaparms[i] <- paste(model$Parms[i],"=",unique(parameters[[i]][subj==Subject]), sep="")
     }
 
-    #If there are discontinuities in the time series
-    if(!is.null(DoseInfo$Rate) | dim(DoseInfo)[1]>length(unique(Subject))){
-        yhat <- list()
+    #If there are multiple dosing in the time series
+
+    if(!is.null(DoseInfo$Tcrit) & max(DoseInfo$Ndose)>1){
+        xhat <- list()
         SE <- list()
         for(i in 1:length(Info[[subj]])){       
             #Infusion adds Rate and Tcrit parameters
@@ -563,74 +666,125 @@ for(subj in unique(as.character(Subject))) {
 
             #First time series without discontinuities
             if(i==1){
-                yhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init,
+                xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init,
                         Time[subj == Subject & Time <= Info[[subj]][[as.character(i)]]$Tcrit], 
                         pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))), 
-                        tcrit=Info[[subj]][[as.character(i)]]$Tcrit, 
-                        rtol=.01, atol=.01,jac=JACfunc)[,c(FALSE,rep(TRUE,length(model$DiffEq))),drop=FALSE]
+                        #tcrit=Info[[subj]][[as.character(i)]]$Tcrit, 
+                        rtol=.01,atol=.01,jac=JACfunc)
             }else{  
             #Remaining time series divided up into discontinuities
                 #If final part of time series then tcrit = max(time)
                 if(i!=length(Info[[subj]])){
-                    yhat[[i]]<- lsoda(yhat[[i-1]][dim(yhat[[i-1]])[1],]+Info[[subj]][[as.character(i)]]$Init,
+                    xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init,
                         Time[subj == Subject & Time >= Info[[subj]][[as.character(i-1)]]$Tcrit & Time <= Info[[subj]][[as.character(i)]]$Tcrit],
                         pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
-                        tcrit=Info[[subj]][[as.character(i)]]$Tcrit,
-                        rtol=.01, atol=.01,jac=JACfunc)[,c(FALSE,rep(TRUE,length(model$DiffEq))),drop=FALSE]       
+                        #tcrit=Info[[subj]][[as.character(i)]]$Tcrit,
+                        rtol=0.01, atol=0.01,jac=JACfunc)      
                 }else{
-                    yhat[[i]]<- lsoda(yhat[[i-1]][dim(yhat[[i-1]])[1],]+Info[[subj]][[as.character(i)]]$Init,
+                    xhat[[i]]<- lsoda(xhat[[i-1]][dim(xhat[[i-1]])[1],-1]+Info[[subj]][[as.character(i)]]$Init,
                         Time[subj == Subject & Time >= Info[[subj]][[as.character(i-1)]]$Tcrit],
                         pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
-                        tcrit=max(data[,nameTime]),
-                        rtol=.01, atol=.01,jac=JACfunc)[,c(FALSE,rep(TRUE,length(model$DiffEq))),drop=FALSE]    
+                        #tcrit=max(data[,nameTime]),
+                        #tcrit=Info[[subj]][[as.character(i)]]$Tcrit,
+                        rtol=0.01, atol=0.01,jac=JACfunc)    
                 }
                     TimeBefore <- rev(Time[subj == Subject & Time <= Info[[subj]][[as.character(i-1)]]$Tcrit])[1]
                     TimeNow <- Time[subj == Subject & Time >= Info[[subj]][[as.character(i-1)]]$Tcrit & Time <= Info[[subj]][[as.character(i)]]$Tcrit][1]
 
                     #If augPred or TimeBefore!=TimeNow then don't enter
-                    if (length(parameters[[1]])==length(data[,nameTime]) & TimeBefore==TimeNow){
-                        yhat[[i-1]] <- yhat[[i-1]][-dim(yhat[[i-1]])[1],,drop=FALSE] #Remove last value from yhat[i-1]  
+                    #if (length(parameters[[1]])==length(data[,nameTime]) & TimeBefore==TimeNow){
+                    if (TimeBefore==TimeNow){
+                      xhat[[i-1]] <- xhat[[i-1]][-dim(xhat[[i-1]])[1],,drop=FALSE] #Remove last value from xhat[i-1]
+                      #xhat[[i]] <- xhat[[i]][-1,,drop=FALSE] #Remove first value from xhat[i]  
                     } 
-                
             }
         }
 
-        #Take out the observed state and sensitivity equations of yhat
+        #Take out the observed state and sensitivity equations of xhat
         for(i in 1:length(Info[[subj]])){
-            if(model$SEQ==TRUE){
-                SE[[i]]   <- yhat[[i]][,c(rep(FALSE,length(model$ObsEq)),rep(model$ObsEq,each=NoP)),drop=FALSE]
-                yhat[[i]] <- yhat[[i]][,c(model$ObsEq,rep(FALSE,(NoS*NoP))),drop=FALSE]
+            if(i==1){
+                if(model$SEQ==TRUE){
+                    SE[[i]]   <- xhat[[i]][,c(FALSE,rep(FALSE,length(ObsStates)),rep(ObsStates,each=NoP)),drop=FALSE]
+                    x <- xhat[[i]][,c(TRUE,rep(TRUE,length(ObsStates)),rep(FALSE,(NoS*NoP))),drop=FALSE]
+                }else{
+                    x <- xhat[[i]]
+                }
             }else{
-                yhat[[i]] <- yhat[[i]][,model$ObsEq,drop=FALSE]
+                if(model$SEQ==TRUE){
+                    SE[[i]]   <- xhat[[i]][,c(FALSE,rep(FALSE,length(ObsStates)),rep(ObsStates,each=NoP)),drop=FALSE]
+                    x <- rbind(x,xhat[[i]][,c(TRUE,rep(TRUE,length(ObsStates)),rep(FALSE,(NoS*NoP))),drop=FALSE])                
+                }else{
+                    x <- rbind(x,xhat[[i]])                
+                }
             }
         }
-
-        yhat <- unlist(yhat) 
-        
+ 
         if(model$SEQ==TRUE){
             SE <- unlist(SE)
             SEAll[subj==Subject,] <- SE                 
         }       
     
     }else{
-    #If there are no discontinuities in the time series
-        yhat  <-    lsoda(Info[[subj]][["1"]]$Init, Time[subj == Subject], pkmodel, 
-                    parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
-                    tcrit=max(data[,nameTime]),
-                    rtol=.01,atol=.01,jac=JACfunc)[,c(FALSE,rep(TRUE,length(model$DiffEq))),drop=FALSE]
-        if(model$SEQ==TRUE){
-            SEAll[subj==Subject,] <- yhat[,c(rep(FALSE,length(model$ObsEq)),rep(model$ObsEq,each=NoP)),drop=FALSE]
-            yhat <- yhat[,c(model$ObsEq,rep(FALSE,(NoS*NoP))),drop=FALSE]
+    #Single dosing time series
+
+            #Infusion adds Rate and Tcrit parameters
+            if (!is.null(Info[[subj]][["1"]]$Rate)){
+                #No estimation of infusion parameters
+                if(Info[[subj]][["1"]]$Rate>=0 & Info[[subj]][["1"]]$StartTime>=0){
+                    lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
+                    lsodaparms[length(parameters)+2] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit)
+                }else{
+                    #Estimation of Rate
+                    if(Info[[subj]][["1"]]$Rate==-1){
+                        Info[[subj]][["1"]]$Tcrit <- Info[[subj]][["1"]]$StartTime + Info[[subj]][["1"]]$Dose / exp(unique(parameters[[RatePlace]][subj==Subject]))
+                        lsodaparms[length(parameters)+1] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit) 
+                    }
+                    #Estimation of Tcrit
+                    if(Info[[subj]][["1"]]$Rate==-2){
+                        Info[[subj]][["1"]]$Rate <- Info[[subj]][["1"]]$Dose / (exp(unique(parameters[[TcritPlace]][subj==Subject])) - Info[[subj]][["1"]]$StartTime)
+                        lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
+                        Info[[subj]][["1"]]$Tcrit <- exp(unique(parameters[[TcritPlace]][subj==Subject]))
+                    }                   
+                }
+            }
+
+        if(is.null(nameType)){
+            x  <-    lsoda(Info[[subj]][["1"]]$Init, Time[subj == Subject], pkmodel, 
+                        parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
+                        #tcrit=max(data[,nameTime]),
+                        rtol=0.01,atol=0.01,jac=JACfunc)
+                        
+            if(model$SEQ==TRUE){
+                SEAll[subj==Subject,] <- x[,c(FALSE,rep(FALSE,length(ObsStates)),rep(ObsStates,each=NoP)),drop=FALSE]
+                x <- x[,c(TRUE,rep(TRUE,length(ObsStates)),rep(FALSE,(NoS*NoP))),drop=FALSE]
+            }
+                       
         }else{
-            yhat <- yhat[,model$ObsEq,drop=FALSE]
+            x   <-   lsoda(Info[[subj]][["1"]]$Init, Time[subj == Subject & Type==1], pkmodel, 
+                        parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
+                        #tcrit=max(data[,nameTime]),
+                        rtol=0.01,atol=0.01,jac=JACfunc)
+        }
+        
+    }
+
+    #Divide x with the scaling parameters
+    FirstTime <- TRUE
+    
+    for(i in 1:length(Scale)){
+        if(ObsStates[i]){
+            if(FirstTime){
+                yhat <- cbind(x[,1],x[,i+1]*unique(Scale[[i]][subj==Subject]))
+                FirstTime <- FALSE
+            }else{
+                yhat <- rbind(yhat,cbind(x[,1],x[,i+1]*unique(Scale[[i]][subj==Subject])))                
+            }
         }
     }
-    
-    ##Divide yhat with the scaling parameters
-    z[subj==Subject] <- yhat*unique(Scale[subj==Subject])
+    z[subj==Subject] <- yhat[order(yhat[,1]),2]
 }   
   
 ##Add gradient attribute to z if SEQ=T
@@ -650,6 +804,7 @@ if(model$SEQ==TRUE){
 }
 #print(lsodaparms)
 ##Pass z back to nlme
+#assign("funceval", funceval+1, env = .GlobalEnv)
 return(z)
 }
 }

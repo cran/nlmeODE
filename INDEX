@@ -6,4 +6,6 @@ nlmeODE                 Non-linear mixed-effects modelling in nlme
                         using differential equations
 PKPD                    Simulated Pharmacokinetic (PK) and
                         Pharmacodynamic (PD) data
+PKPDpool                Simulated PK/PD pool model
+PKPDtol                 Simulated turnover PK/PD model with tolerance
 TheophODE               Pharmacokinetics of theophylline

@@ -60,13 +60,15 @@
 data(TheophODE)
 
 OneComp <- list(DiffEq=list(               #Differential equations
-                    dy1dt = ~ -ka*y1 ,      #Compartment 1
-                    dy2dt = ~ ka*y1-ke*y2), #Compartment 2
-                ObsEq= ~ y2/CL*ke,         #Observation equation  
+                    dy1dt = ~ -ka*y1 ,        #Compartment 1
+                    dy2dt = ~ ka*y1-ke*y2),   #Compartment 2
+                ObsEq=list(                #Observation equation  
+                    c1 = ~ 0,
+                    c2 = ~ y2/CL*ke),
                 Parms=c("ka","ke","CL"),   #Parameter names
                 LogParms=TRUE,             #Estimate the logarithm of the parameters 
                 States=c("y1","y2"),       #The names of the states in the sequence of DiffEq
-                Init=c(FALSE,FALSE),       #Estimate the Initial states  
+                Init=list(0,0),               #Estimate the Initial states  
                 JAC=TRUE,                  #Use the Jacobian             
                 SEQ=FALSE)                 #Use sensitivity equations   
 
@@ -75,7 +77,7 @@ TheophModel <- nlmeODE(OneComp,TheophODE)
 Theoph.nlme <- nlme(conc ~ TheophModel(ka,ke,CL,Time,Subject),
    data = TheophODE, fixed=ka+ke+CL~1, random = pdDiag(ka+CL~1), 
    start=c(ka=0.5,ke=-2.5,CL=-3.2),
-   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-3,pnlsTol=0.1,msTol=1e-3))
+   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3))
 
 plot(augPred(Theoph.nlme,level=0:1))
 

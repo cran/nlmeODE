@@ -1,13 +1,13 @@
-\name{PKPD}
-\alias{PKPD}
-\title{ Simulated Pharmacokinetic (PK) and Pharmacodynamic (PD) data }
+\name{PKPDtol}
+\alias{PKPDtol}
+\title{ Simulated turnover PK/PD model with tolerance }
+\usage{data(PKPDtol)}
 \docType{data}
-\usage{data(PKPD)}
 \description{
   Simulated data of an intraveneous bolus dose PK study with administration 
   to twelve subjects and PK and PD plasma concentration measurements at twelve
   time points pr. subject. The PK/PD is modelled simultaneously using a one-compartment
-  PK model with IV bolus and an indirect response PD model with inhibition on Kin.
+  PK model with IV bolus and a turnover PD model with tolerance build-up.
 }
 \format{
   This data frame contains the following columns:
@@ -22,31 +22,34 @@
 }
 
 \examples{
-data(PKPD)
+data(PKPDtol)
 
 #Fixed parameters
-PKPD$Emax <-  rep(log(1),dim(PKPD)[1])
+PKPDtol$Emax <-  rep(log(1),dim(PKPDtol)[1])
 
-IRmodel <- list( DiffEq = list( 
+ToleranceModel <- list(
+              DiffEq = list( 
                 dy1dt = ~ -ke*y1,
-                dy2dt = ~ Kin * (1-Emax*(y1/Vd)**gamma/(EC50**gamma+(y1/Vd)**gamma)) - Kin/BL * y2),
-            ObsEq  = list(
-                PK   = ~ y1/Vd,
-                PD   = ~ y2),        
-            States=c("y1","y2"), 
-            Parms=c("ke","Vd","Kin","BL","Emax","EC50","gamma"),
-            LogParms=TRUE,             
-            Init=list(0,"BL"), 
-            JAC=FALSE,           
-            SEQ=FALSE)
+                dy2dt = ~ Kin * (1-Emax*(y1/Vd)**gamma/(EC50**gamma+(y1/Vd)**gamma)) - Kout * y2 * (1+y3),
+                dy3dt = ~ Ktol * (y2-y3)),
+              ObsEq  = list(  
+                c1 = ~ y1/Vd,
+                c2 = ~ y2,
+                c3 = ~ 0),        
+              States=c("y1","y2","y3"), 
+              Parms=c("ke","Vd","Kin","Kout","Emax","EC50","gamma","Ktol"),
+              LogParms=TRUE,             
+              Init=list(0,"-0.5+(0.25+Kin/Kout)**0.5","-0.5+(0.25+Kin/Kout)**0.5"), 
+              JAC=FALSE,           
+              SEQ=FALSE)
 
-PKPDmodel <- nlmeODE(IRmodel,PKPD)
+TolPKPDModel <- nlmeODE(ToleranceModel,PKPDtol)
 
-PKPD.nlme <- nlme(Conc ~ PKPDmodel(ke,Vd,Kin,BL,Emax,EC50,gamma,Time,Subject,Type),
-        data = PKPD, fixed=ke+Vd+Kin+BL+EC50+gamma~1, random = pdDiag(ke+Vd+EC50~1),
+PKPDtol.nlme <- nlme(Conc ~ TolPKPDModel(ke,Vd,Kin,Kout,Emax,EC50,gamma,Ktol,Time,Subject,Type),
+        data = PKPDtol, fixed=ke+Vd+Kin+Kout+EC50+gamma+Ktol~1, random = pdDiag(ke+Vd+EC50~1),
         groups=~Subject,
         weights=varIdent(form=~1|Type),
-        start=c(ke=log(0.1),Vd=log(10),Kin=log(5),BL=log(10),EC50=log(5),gamma=log(3)),
+        start=c(ke=log(0.05),Vd=log(10),Kin=log(10),Kout=log(0.1),EC50=log(5),gamma=log(3),Ktol=log(0.01)),
         control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3,msMaxIter=20,pnlsMaxIter=20))
 
 #Plot results
@@ -58,47 +61,49 @@ TimeSim <- rep(rep(TimeSim,each=2),12)
 SubjectSim <- rep(1:12,each=2*ni)
 TypeSim <- rep(rep(c(1,2),ni),12)
 
-IndCoef <- coef(PKPD.nlme)
-IpredSim <- PKPDmodel(  rep(IndCoef[,1],each=2*ni),
+IndCoef <- coef(PKPDtol.nlme)
+IpredSim <- TolPKPDModel(  rep(IndCoef[,1],each=2*ni),
                 rep(IndCoef[,2],each=2*ni),
                 rep(IndCoef[,3],each=2*ni),
                 rep(IndCoef[,4],each=2*ni),
                 rep(rep(log(1),12),each=2*ni),
                 rep(IndCoef[,5],each=2*ni),
                 rep(IndCoef[,6],each=2*ni),
+                rep(rep(log(0.01),12),each=2*ni),
                 TimeSim,SubjectSim,TypeSim)
 
-PopCoef <- fixef(PKPD.nlme)
-PredSim <- PKPDmodel(  rep(rep(PopCoef[1],12),each=2*ni),
+PopCoef <- fixef(PKPDtol.nlme)
+PredSim <- TolPKPDModel(  rep(rep(PopCoef[1],12),each=2*ni),
                 rep(rep(PopCoef[2],12),each=2*ni),
                 rep(rep(PopCoef[3],12),each=2*ni),
                 rep(rep(PopCoef[4],12),each=2*ni),
                 rep(rep(log(1),12),each=2*ni),
                 rep(rep(PopCoef[5],12),each=2*ni),
                 rep(rep(PopCoef[6],12),each=2*ni),
+                rep(rep(log(0.01),12),each=2*ni),
                 TimeSim,SubjectSim,TypeSim)
 
-plotIR <- as.data.frame(rbind(cbind(TimeSim,SubjectSim,PredSim,TypeSim,rep("Pred",2400)),
+plotTol <- as.data.frame(rbind(cbind(TimeSim,SubjectSim,PredSim,TypeSim,rep("Pred",2400)),
                           cbind(TimeSim,SubjectSim,IpredSim,TypeSim,rep("Ipred",2400)),
-                          cbind(PKPD$Time,PKPD$Subject,PKPD$Conc,PKPD$Type,rep("Obs",288))
+                          cbind(PKPDtol$Time,PKPDtol$Subject,PKPDtol$Conc,PKPDtol$Type,rep("Obs",288))
                          ))
-names(plotIR) <- c("Time","Subject","Conc","Type","Flag")
+names(plotTol) <- c("Time","Subject","Conc","Type","Flag")
 
-plotIR$Subject <- as.factor(as.numeric(as.character(plotIR$Subject)))
-plotIR$Type <- as.factor(plotIR$Type)
-plotIR$Flag <- as.factor(plotIR$Flag)
-plotIR$Conc <- as.numeric(as.character(plotIR$Conc))
-plotIR$Time <- as.numeric(as.character(plotIR$Time))
+plotTol$Subject <- as.factor(as.numeric(as.character(plotTol$Subject)))
+plotTol$Type <- as.factor(plotTol$Type)
+plotTol$Flag <- as.factor(plotTol$Flag)
+plotTol$Conc <- as.numeric(as.character(plotTol$Conc))
+plotTol$Time <- as.numeric(as.character(plotTol$Time))
 
-plotIRPK <- subset(plotIR,Type==1)
-plotIRPD <- subset(plotIR,Type==2)
+plotTolPK <- subset(plotTol,Type==1)
+plotTolPD <- subset(plotTol,Type==2)
 
 trellis.device(width=7, height=6.5,bg="transparent")
 sb <- trellis.par.get("strip.background")
 sb$col <- c(16,11,9,13,10,15,14) 
 trellis.par.set("strip.background",sb)
 par(oma=c(0,1,1,0),mgp=c(3,1,.3))
-xyplot (Conc~Time | Subject, data=plotIRPK, 
+xyplot (Conc~Time | Subject, data=plotTolPK, 
                        layout=c(4,3),
                        aspect=1/1,
                        groups=Flag,
@@ -108,7 +113,7 @@ xyplot (Conc~Time | Subject, data=plotIRPK,
                        key=list(x=0.23,y=1.03,corner=c(0,1),transparent=TRUE,
                             text = list(c("Population", "Individual","Observed")), 
                             lines = list(type=c("l","l","p"), pch=1, col=c(1,1,1), lty=c(1,2,1)),columns=3),   
-                       strip=function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
+                       strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
                        panel = function(x, y, groups,...) {
                                 panel.grid(h=3,v=3,col="lightgray",lwd=0.7,...)
                            panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c(1,1,1), lty=c(2,1,1),pch=1, lwd=1.4,...)},
@@ -117,10 +122,10 @@ xyplot (Conc~Time | Subject, data=plotIRPK,
 
 trellis.device(width=7, height=6.5,bg="transparent")
 sb <- trellis.par.get("strip.background")
-sb$col <- c(16,11,9,13,10,15,14) 
+sb$col <- c(16,11,9,13,10,15,14)
 trellis.par.set("strip.background",sb)
 par(oma=c(0,1,1,0),mgp=c(3,1,.3))
-xyplot (Conc~Time | Subject, data=plotIRPD,
+xyplot (Conc~Time | Subject, data=plotTolPD, 
                        layout=c(4,3),
                        aspect=1/1,
                        groups=Flag,
@@ -130,7 +135,7 @@ xyplot (Conc~Time | Subject, data=plotIRPD,
                        key=list(x=0.23,y=1.03,corner=c(0,1),transparent=TRUE,
                             text = list(c("Population", "Individual","Observed")), 
                             lines = list(type=c("l","l","p"), pch=1, col=c(1,1,1), lty=c(1,2,1)),columns=3),   
-                       strip=function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
+                       strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
                        panel = function(x, y, groups,...) {
                                 panel.grid(h=3,v=3,col="lightgray",lwd=0.7,...)
                            panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c(1,1,1), lty=c(2,1,1),pch=1, lwd=1.4,...)},

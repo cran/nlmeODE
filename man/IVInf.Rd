@@ -1,7 +1,7 @@
 \name{IVInf}
 \alias{IVInf}
-\non_function{}
 \title{ Simulated PK data with a single IV infusion }
+\docType{data}
 \usage{data(IVInf)}
 \description{
   Simulated data of an intraveneous infusion study with a single IV infusion
@@ -26,11 +26,12 @@ data(IVInf)
 
 onecompIV <- list(DiffEq=list(              #Differential equations
                     dy1dt = ~ -ke*y1),              #Compartment 1
-                  ObsEq= ~ y1/Vd,           #Observation equation  
+                  ObsEq=list(               #Observation equation 
+                    c1 = ~ y1/Vd),            
                   States=c("y1"),           #The names of the states in the sequence of DiffEq
                   Parms=c("ke","Vd"),       #Parameter names
                   LogParms=TRUE,            #Estimate the logarithm of the parameters 
-                  Init=c(FALSE),            #Estimate the Initial states  
+                  Init=list(0),                #Estimate the Initial states  
                   JAC=TRUE,                 #Use the Jacobian             
                   SEQ=FALSE)                #Use sensitivity equations  
 
@@ -38,9 +39,9 @@ IVInfModel <- nlmeODE(onecompIV,IVInf)
 
 fit <- nlme(Conc ~ IVInfModel(ke,Vd,Time,Subject),
    data = IVInf, fixed=ke+Vd~1, random = pdDiag(ke~1), 
-   start=c(ke=log(0.1),Vd=log(0.5)),
-   control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=0.1,msTol=1e-3))
+   start=c(ke=log(0.1),Vd=log(1.5)),
+   control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-3,msTol=1e-3))
 
-#plot(augPred(fit,level=0:1,length.out=300))
+plot(augPred(fit,level=0:1,length.out=300))
 }
 \keyword{datasets}
