@@ -1,37 +1,10 @@
 \name{TheophODE}
-\docType{data}
 \alias{TheophODE}
 \title{Pharmacokinetics of theophylline}
 \description{
-  The \code{TheophODE} data frame has 132 rows and 6 columns of data from
+  The \code{Theoph} data frame has 132 rows and 6 columns of data from
   an experiment on the pharmacokinetics of theophylline.}
-\usage{data(TheophODE)}
-\format{
-  This data frame contains the following columns:
-  \describe{
-    \item{\code{Subject}}{
-      an ordered factor with levels \code{1}, \dots, \code{12}
-      identifying the subject on whom the observation was made.  The
-      ordering is by increasing maximum concentration of theophylline
-      observed.
-    }
-    \item{\code{Wt}}{
-      weight of the subject (kg).
-    }
-    \item{\code{Dose}}{
-      dose of theophylline administered orally to the subject (mg/kg).
-    }
-    \item{\code{Time}}{
-      time since drug administration when the sample was drawn (hr).
-    }
-    \item{\code{conc}}{
-      theophylline concentration in the sample (mg/L).
-    }
-    \item{\code{Cmt}}{
-      compartment in which the dose is given.
-    }
-  }
-}
+
 \details{
   Boeckmann, Sheiner and Beal (1994) report data from a study by
   Dr. Robert Upton of the kinetics of the anti-asthmatic drug
@@ -58,7 +31,11 @@
 }
 \seealso{\code{\link[nls]{Theoph}}, \code{\link[nls]{SSfol}}}
 \examples{
-data(TheophODE)
+data(Theoph)
+
+TheophODE <- Theoph
+TheophODE$Dose[TheophODE$Time!=0] <- 0
+TheophODE$Cmt <- rep(1,dim(TheophODE)[1])
 
 OneComp <- list(DiffEq=list(               
                     dy1dt = ~ -ka*y1 ,     
@@ -81,4 +58,4 @@ Theoph.nlme <- nlme(conc ~ TheophModel(ka,ke,CL,Time,Subject),
 plot(augPred(Theoph.nlme,level=0:1))
 
 }
-\keyword{datasets}
+\keyword{models}

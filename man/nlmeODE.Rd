@@ -35,36 +35,26 @@ by simultaneous solution of the sensitivity equations associated with the system
   A function compatible with \code{nlme} estimation for systems of ordinary differential equations (ODE's).
 }
 \note{
-  The \file{demo} directory contains an example of using
-  nlmeODE for simultaneous non-linear mixed-effects modelling
-  of population PK/PD data (type \code{demo(nlmeODE)}). For examples
-  of other commonly used models see \code{\link{TheophODE}},
-  \code{\link{IndomethODE}}, and \code{\link{IVInf}}.
+  For examples of other commonly used models see \code{\link{PKPDpool}}, 
+  \code{\link{TheophODE}}, \code{\link{IndomethODE}}, and \code{\link{PKsim}}.
   }
 
 \author{Christoffer W. Tornoe <\email{christoffer.tornoe@ferring.com}>}
 \seealso{\code{\link[nlme]{nlme}}, \code{\link[odesolve]{lsoda}}}
 \examples{
-### Example with multiple IV bolus doses
-data(MultBolus)
 
-onecompIV <- list(DiffEq=list(              
-                    dy1dt = ~ -ke*y1),      
-                  ObsEq=list(               
-                    c1 = ~ y1/Vd),          
-                  States=c("y1"),           
-                  Parms=c("ke","Vd"),       
-                  Init=list(0))
+### Example with simulation and estimation of PK data 
+?PKsim
 
-MultBolusModel <- nlmeODE(onecompIV,MultBolus)
+### Simultaneous estimation of PK/PD data  
+?PKPDpool
 
-fit <- nlme(Conc ~ MultBolusModel(ke,Vd,Time,ID),
-   data = MultBolus, fixed=ke+Vd~1, random = pdDiag(ke~1), 
-   start=c(ke=log(0.1), Vd=log(1)),
-   control=list(msVerbose=TRUE),
-   verbose=TRUE)
+### Indometh example of a two-compartment model 
+?IndomethODE
 
-plot(augPred(fit,level=0:1))
+### Theoph example of a one-compartment model with first-order absorption  
+?TheophODE
+
 }
 
 \keyword{models}

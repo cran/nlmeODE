@@ -1,52 +1,72 @@
 \name{PKPDpool}
 \alias{PKPDpool}
-\title{ Simulated PK/PD pool model }
-\docType{data}
-\usage{data(PKPDpool)}
+\title{ Simulation and simultaneous estimation of PK/PD pool model }
 \description{
-  Simulated data of an intraveneous bolus dose PK study with administration 
+  Simulation and estimation of an intraveneous bolus dose PK study with administration 
   to twelve subjects and PK and PD plasma concentration measurements at twelve
   time points pr. subject. The PK/PD is modelled simultaneously using a one-compartment
   PK model with IV bolus and a indirect response pool PD model.
 }
-\format{
-  This data frame contains the following columns:
-  \describe{
-    \item{\code{Subject}}{An ordered factor identifying the subjects}
-    \item{\code{Time}}{A numeric vector giving the time since drug administration (hours)}
-    \item{\code{Dose}}{A numeric vector giving the dose amount (mg)}
-    \item{\code{Cmt}}{A numeric vector giving the dosing compartment}
-    \item{\code{Type}}{A factor specifying whether it is PK (Type=1) or PD (Type=2) observations}
-    \item{\code{Conc}}{A numeric vector giving the PK and PD concentration in the plasma (ng/mL)}
-  }
-}
-
 \examples{
-data(PKPDpool)
-
-#Fixed parameters
-PKPDpool$Emax  <-  rep(log(1),dim(PKPDpool)[1])
 
 PoolModel <- list(
                 DiffEq=list(
                     dy1dt = ~ -ke*y1,
-                    dy2dt = ~ Kloss * (1-Emax*(y1/Vd)**gamma/(EC50**gamma+(y1/Vd)**gamma)) * y3 - Kout * y2,
-                    dy3dt = ~ Kin - Kloss * (1-Emax*(y1/Vd)**gamma/(EC50**gamma+(y1/Vd)**gamma))*y3),
+                    dy2dt = ~ krel * (1-Emax*(y1/Vd)**gamma/(EC50**gamma+(y1/Vd)**gamma)) * y3 - kout * y2,
+                    dy3dt = ~ Kin - krel * (1-Emax*(y1/Vd)**gamma/(EC50**gamma+(y1/Vd)**gamma))*y3),
                 ObsEq=list(
-                    c1   = ~ y1/Vd,
-                    c2   = ~ y2,
+                    PK   = ~ y1/Vd,
+                    PD   = ~ y2,
                     Pool = ~ 0),        
               States=c("y1","y2","y3"), 
-              Parms=c("ke","Vd","Kin","Kout","Emax","EC50","gamma","Kloss"),
-              Init=list(0,"Kin/Kout","Kin/Kloss"))
+              Parms=c("ke","Vd","Kin","kout","krel","Emax","EC50","gamma"),
+              Init=list(0,"Kin/kout","Kin/krel"))
 
-PoolPKPDModel <- nlmeODE(PoolModel,PKPDpool,JAC=FALSE)
+ID    <- rep(seq(1:12),each=2*12)
+Time  <- rep(rep(c(0,0.25,0.5,0.75,1,2,4,6,8,10,12,24),each=2),12)
+Dose  <- rep(c(100,rep(0,23)),12)
+Cmt   <- rep(rep(c(1,2),12),12)
+Type  <- rep(rep(c(1,2),12),12)
+Conc  <- rep(0,2*12*12)
 
-PKPDpool.nlme <- nlme(Conc ~ PoolPKPDModel(ke,Vd,Kin,Kout,Emax,EC50,gamma,Kloss,Time,Subject,Type),
-        data = PKPDpool, fixed=ke+Vd+Kin+Kout+EC50+gamma+Kloss~1, random = pdDiag(ke+Vd+EC50~1),
-        groups=~Subject,
+Data <- as.data.frame(list(ID=ID,Time=Time,Dose=Dose,Cmt=Cmt,Type=Type,Conc=Conc))
+
+SimData <- groupedData( Conc ~ Time | ID/Type,
+               data = Data,
+               labels = list( x = "Time", y = "Concentration"))
+
+PKPDpoolModel <- nlmeODE(PoolModel,SimData,JAC=FALSE)
+
+keSim    <- rep(log(rep(0.05,12))+0.1*rnorm(12),each=2*12)
+VdSim    <- rep(log(rep(10,12))+0.01*rnorm(12),each=2*12)
+EC50Sim  <- rep(log(rep(5,12))+0.1*rnorm(12),each=2*12)
+KinSim   <- rep(log(5),2*12*12)
+koutSim  <- rep(log(0.5),2*12*12)
+krelSim  <- rep(log(2),2*12*12)
+EmaxSim  <- rep(log(1),2*12*12)
+gammaSim <- rep(log(3),2*12*12)
+
+SimData$Sim <- PKPDpoolModel(keSim,VdSim,KinSim,koutSim,krelSim,EmaxSim,EC50Sim,gammaSim,SimData$Time,SimData$ID,SimData$Type)
+SimData$Conc[SimData$Type==1] <- SimData$Sim[SimData$Type==1] + 0.1*rnorm(length(SimData[SimData$Type==1,1]))
+SimData$Conc[SimData$Type==2] <- SimData$Sim[SimData$Type==2] + 0.01*rnorm(length(SimData[SimData$Type==2,1]))
+
+Data <- groupedData( Conc ~ Time | ID/Type,
+               data = SimData,
+               labels = list( x = "Time", y = "Concentration"))
+
+plot(Data,display=1,aspect=1/1)
+
+#Fixed parameters
+Data$Emax  <-  rep(log(1),dim(Data)[1])
+
+#Estimation of model parameters
+PKPDpoolModel <- nlmeODE(PoolModel,Data,JAC=FALSE)
+
+PKPDpool.nlme <- nlme(Conc ~ PKPDpoolModel(ke,Vd,Kin,kout,krel,Emax,EC50,gamma,Time,ID,Type),
+        data = Data, fixed=ke+Vd+Kin+kout+krel+EC50+gamma~1, random = pdDiag(ke+Vd+EC50~1),
+        groups=~ID,
         weights=varIdent(form=~1|Type),
-        start=c(ke=log(0.05),Vd=log(10),Kin=log(5),Kout=log(0.5),EC50=log(5),gamma=log(3),Kloss=log(2)),
+        start=c(ke=log(0.05),Vd=log(10),Kin=log(5),kout=log(0.5),krel=log(2),EC50=log(5),gamma=log(3)),
         control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1,msMaxIter=20,pnlsMaxIter=20),
         verbose=TRUE)
 
@@ -56,38 +76,38 @@ ni <- 100
 TimeSim <- seq(from=0,to=24,length=ni)
 TimeSim <- rep(rep(TimeSim,each=2),12)
 
-SubjectSim <- rep(1:12,each=2*ni)
+IDSim <- rep(1:12,each=2*ni)
 TypeSim <- rep(rep(c(1,2),ni),12)
 
 IndCoef <- coef(PKPDpool.nlme)
-IpredSim <- PoolPKPDModel(  rep(IndCoef[,1],each=2*ni),
+IpredSim <- PKPDpoolModel(  rep(IndCoef[,1],each=2*ni),
                 rep(IndCoef[,2],each=2*ni),
                 rep(IndCoef[,3],each=2*ni),
                 rep(IndCoef[,4],each=2*ni),
-                rep(rep(log(1),12),each=2*ni),
                 rep(IndCoef[,5],each=2*ni),
+                rep(rep(log(1),12),each=2*ni),
                 rep(IndCoef[,6],each=2*ni),
-                rep(rep(log(2),12),each=2*ni),
-                TimeSim,SubjectSim,TypeSim)
+                rep(IndCoef[,7],each=2*ni),
+                TimeSim,IDSim,TypeSim)
 
 PopCoef <- fixef(PKPDpool.nlme)
-PredSim <- PoolPKPDModel(  rep(rep(PopCoef[1],12),each=2*ni),
+PredSim <- PKPDpoolModel(  rep(rep(PopCoef[1],12),each=2*ni),
                 rep(rep(PopCoef[2],12),each=2*ni),
                 rep(rep(PopCoef[3],12),each=2*ni),
                 rep(rep(PopCoef[4],12),each=2*ni),
-                rep(rep(log(1),12),each=2*ni),
                 rep(rep(PopCoef[5],12),each=2*ni),
+                rep(rep(log(1),12),each=2*ni),
                 rep(rep(PopCoef[6],12),each=2*ni),
-                rep(rep(log(2),12),each=2*ni),
-                TimeSim,SubjectSim,TypeSim)
+                rep(rep(PopCoef[7],12),each=2*ni),
+                TimeSim,IDSim,TypeSim)
 
-plotPool <- as.data.frame(rbind(cbind(TimeSim,SubjectSim,PredSim,TypeSim,rep("Pred",2400)),
-                          cbind(TimeSim,SubjectSim,IpredSim,TypeSim,rep("Ipred",2400)),
-                          cbind(PKPDpool$Time,PKPDpool$Subject,PKPDpool$Conc,PKPDpool$Type,rep("Obs",288))
+plotPool <- as.data.frame(rbind(cbind(TimeSim,IDSim,PredSim,TypeSim,rep("Pred",2400)),
+                          cbind(TimeSim,IDSim,IpredSim,TypeSim,rep("Ipred",2400)),
+                          cbind(Data$Time,Data$ID,Data$Conc,Data$Type,rep("Obs",288))
                          ))
-names(plotPool) <- c("Time","Subject","Conc","Type","Flag")
+names(plotPool) <- c("Time","ID","Conc","Type","Flag")
 
-plotPool$Subject <- as.factor(as.numeric(as.character(plotPool$Subject)))
+plotPool$ID <- as.factor(as.numeric(as.character(plotPool$ID)))
 plotPool$Type <- as.factor(plotPool$Type)
 plotPool$Flag <- as.factor(plotPool$Flag)
 plotPool$Conc <- as.numeric(as.character(plotPool$Conc))
@@ -96,12 +116,13 @@ plotPool$Time <- as.numeric(as.character(plotPool$Time))
 plotPoolPK <- subset(plotPool,Type==1)
 plotPoolPD <- subset(plotPool,Type==2)
 
+require(lattice)
 trellis.device(width=7, height=6.5,bg="transparent")
 sb <- trellis.par.get("strip.background")
 sb$col <- c(16,11,9,13,10,15,14)
 trellis.par.set("strip.background",sb)
 par(oma=c(0,1,1,0),mgp=c(3,1,.3))
-xyplot (Conc~Time | Subject, data=plotPoolPK, 
+xyplot (Conc~Time | ID, data=plotPoolPK, 
                        layout=c(4,3),
                        aspect=1/1,
                        groups=Flag,
@@ -117,13 +138,12 @@ xyplot (Conc~Time | Subject, data=plotPoolPK,
                            panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c(1,1,1), lty=c(2,1,1),pch=1, lwd=1.4,...)},
                        par.strip.text=list(cex=1.0))
 
-
 trellis.device(width=7, height=6.5,bg="transparent")
 sb <- trellis.par.get("strip.background")
 sb$col <- c(16,11,9,13,10,15,14) 
 trellis.par.set("strip.background",sb)
 par(oma=c(0,1,1,0),mgp=c(3,1,.3))
-xyplot (Conc~Time | Subject, data=plotPoolPD,
+xyplot (Conc~Time | ID, data=plotPoolPD,
                        layout=c(4,3),
                        aspect=1/1,
                        groups=Flag,
@@ -140,4 +160,4 @@ xyplot (Conc~Time | Subject, data=plotPoolPD,
                        par.strip.text=list(cex=1.0))
 
 }
-\keyword{datasets}
+\keyword{models}

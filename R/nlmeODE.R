@@ -54,7 +54,7 @@ Info<- list()
 if (is.null(data$Dose)){
     DoseInfo <-  data.frame(unique(data[,nameSubject]),rep(1,length(unique(data[,nameSubject]))))
     names(DoseInfo) <- c(nameSubject,"Ndose")
-    Ucomp <- rep(0,length(unique(data[,nameSubject])))
+    Ucomp <- logical(length(model$States))
     
     for(i in as.character(unique(data[,nameSubject]))){
         if(SEQ==TRUE){
@@ -68,14 +68,14 @@ if (is.null(data$Dose)){
 }else{
     DoseInfo <- as.data.frame(data[data$Dose!=0,,drop=FALSE])
 
-    #Unique compartments with dosing
-    Ucomp <- numeric(length(model$States))
-    Ucomp[sort(unique(DoseInfo$Cmt))[1]:length(sort(unique(DoseInfo$Cmt)))]  <- sort(unique(DoseInfo$Cmt))
-
+    #Unique compartments with infusion doses
+    Ucomp <- logical(length(model$States))
+    Ucomp[unique(DoseInfo$Cmt[DoseInfo$Rate!=0])] <- TRUE
+    
     #Infusion stop
     if(!is.null(DoseInfo$Rate)){
         for(i in 1:length(DoseInfo$Rate)){
-            if(DoseInfo$Rate[i]<0){
+            if(DoseInfo$Rate[i]<=0){
                 DoseInfo$Tcrit[i] <- DoseInfo$Rate[i]               
             }else{
                 DoseInfo$Tcrit[i] <- DoseInfo[i,nameTime] + DoseInfo$Dose[i] / DoseInfo$Rate[i]
@@ -85,7 +85,6 @@ if (is.null(data$Dose)){
         #Find rate/tcrit parameter in model$parms for estimation of rate/time of infusion
         RatePlace <- grep("Rate",model$Parms)
         TcritPlace <- grep("Tcrit",model$Parms)
-        
     }    
 
     #Multiple doses
@@ -129,7 +128,8 @@ if (is.null(data$Dose)){
                 }
             }
         }else{      
-            for(j in 1:(dim(DoseSubj)[1])){             
+            for(j in 1:(dim(DoseSubj)[1])){
+                if(DoseSubj$Rate[j]==0) InitVector[DoseSubj$Cmt[j]] <- InitVector[DoseSubj$Cmt[j]] + DoseSubj$Dose[j]             
                     Info[[i]][[as.character(j)]] <- 
                     list(   Init=InitVector,
                             Tcrit=DoseSubj$Tcrit[j],
@@ -381,43 +381,13 @@ for(i in 1:length(model$Parms)){
 for(i in 1:length(model$DiffEq)){
     temp <- as.character(rev(model$DiffEq[[i]]))[[1]]
 
-#    for(j in 1:length(parmstate)){
-        #Parameters 
-#        if(j <= length(model$Parms)){
-            #Estimate Log(parameters) if LogParms==TRUE 
-#            if (LogParms==TRUE){ 
-#                temp <- gsub(parmstate[j],paste("exp(p[\"",parmstate[j],"\"])",sep=""),temp)
-#            }else{
-#                temp <- gsub(parmstate[j],paste("p[\"",parmstate[j],"\"]",sep=""),temp) 
-#            }
-        #States
-#        }else{                        
-#            temp <- gsub(parmstate[j],paste("y[",j-length(model$Parms),"]",sep=""),temp)
-#        }
-#    }
-    
-    if(!is.null(DoseInfo$Rate) & Ucomp[i] == i){
-        if(length(RatePlace)==0 & length(TcritPlace)==0 | LogParms==FALSE){
+    if(!is.null(DoseInfo$Rate) & Ucomp[i]){
+        #if(length(RatePlace)==0 & length(TcritPlace)==0 | LogParms==FALSE){
             if(BioState[i]){
-                temp <- paste(temp," + F",i,"*(t>=p[\"StartT\"])*p[\"Rate\"]*(t<=p[\"Tcrit\"])",sep="")
+                temp <- paste(temp," + F",i,"*(t>=p[\"StartT\"])*Rate*(t<=Tcrit)",sep="")
             }else{
-                temp <- paste(temp," + (t>=p[\"StartT\"])*p[\"Rate\"]*(t<=p[\"Tcrit\"])")
+                temp <- paste(temp," + (t>=p[\"StartT\"])*Rate*(t<=Tcrit)")
             }
-         }else{              
-            if(length(TcritPlace)==0){
-                if(BioState[i]){
-                    temp <- paste(temp," + F",i,"*(t>=p[\"StartT\"])*exp(p[\"Rate\"])*(t<=p[\"Tcrit\"])",sep="")                           
-                }else{
-                    temp <- paste(temp," + (t>=p[\"StartT\"])*exp(p[\"Rate\"])*(t<=p[\"Tcrit\"])")
-                }
-            }else{
-                if(BioState[i]){
-                    temp <- paste(temp," + F",i,"*(t>=p[\"StartT\"])*p[\"Rate\"]*(t<=exp(p[\"Tcrit\"]))",sep="")             
-                }else{
-                    temp <- paste(temp," + (t>=p[\"StartT\"])*p[\"Rate\"]*(t<=exp(p[\"Tcrit\"]))",sep="")             
-                }
-            }
-        }
     }
 
     model$DiffEq[[i]] <- eval(parse(text=paste("~",temp)))
@@ -515,13 +485,22 @@ for(i in 1:length(model$DiffEq)){
                 eval(parse(text=paste(parmstate[i],"<- y[",i-length(model$Parms),"]",sep="")  ))
             }
         }
+        
+        if(!is.null(DoseInfo$Rate)){
+            Rate <- p["Rate"]
+            Tcrit <- p["Tcrit"]
+            if(length(RatePlace)!=0 & LogParms==TRUE) Rate <- exp(p["Rate"])
+            if(length(TcritPlace)!=0 & LogParms==TRUE) Tcrit <- exp(p["Tcrit"]) 
+        }
+        
         for (i in 1:length(model$DiffEq)){
             eval(parse(text=paste("yd",i,"<-",rev(as.character(model$DiffEq[[i]]))[[1]], sep="")))
             lsodaeq[i]   <- paste("yd",i,sep="")
         }
       eval(parse(text=paste("list(c(",sep="",paste(lsodaeq,collapse=","),"))")))
    }
-
+   
+  
 #assign("funceval", 0, env = .GlobalEnv)
 
 ####Objects passed on to nlmeODE function below
@@ -542,7 +521,7 @@ for(i in 1:length(model$DiffEq)){
 # ObsStates     :   The observed states
 # Info          :   List object with information for each subject divided up into discontinuities
 # TcritPlace    :   Position of tcrit parameter in model$Parms
-# Ucomp         :   Compartments where a dose is entered
+# Ucomp         :   Compartments where a infusion dose is entered
 ##Function used in nlme call
 
 function(...) {
@@ -678,34 +657,46 @@ for(subj in unique(as.character(Subject))) {
             if (!is.null(Info[[subj]][[as.character(i)]]$Rate)){
                 #No estimation of infusion parameters
                 if(Info[[subj]][[as.character(i)]]$Rate>=0 & Info[[subj]][[as.character(i)]]$StartTime>=0){
-                    lsodaparms[length(lsodaparms)+1] <- paste("Rate=",Info[[subj]][[as.character(i)]]$Rate)
-                    lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",Info[[subj]][[as.character(i)]]$Tcrit)
-                    lsodaparms[length(lsodaparms)+1] <- paste("StartT=",Info[[subj]][["1"]]$StartTime)
+                    lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][[as.character(i)]]$Rate)
+                    lsodaparms[length(parameters)+2] <- paste("Tcrit=",Info[[subj]][[as.character(i)]]$Tcrit)
+                    lsodaparms[length(parameters)+3] <- paste("StartT=",Info[[subj]][[as.character(i)]]$StartTime)
                 }else{
                     #After infusion stop
                     if(Info[[subj]][[as.character(i)]]$Rate==0){
                         if(length(RatePlace)>0){    #Estimation of Rate
-                            lsodaparms[RatePlace] <- paste("Rate=",0)
-                            lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",0) 
-                        }else{                      #Estimation of Tcrit 
-                            lsodaparms[TcritPlace] <- paste("Tcrit=",0)
-                            lsodaparms[length(lsodaparms)+1] <- paste("Rate=",0)                            
+                            lsodaparms[RatePlace] <- "Rate=0"
+                            lsodaparms[length(parameters)+1] <- "Tcrit=0" 
+                        }
+                        if(length(TcritPlace)>0){   #Estimation of Tcrit 
+                            lsodaparms[TcritPlace] <- "Tcrit=0"
+                            lsodaparms[length(parameters)+1] <- "Rate=0"                            
                         }
                     }
                     #Estimation of Rate
                     if(Info[[subj]][[as.character(i)]]$Rate==-1){
-                        Info[[subj]][[as.character(i)]]$Tcrit <- Info[[subj]][[as.character(i)]]$StartTime + Info[[subj]][[as.character(i)]]$Dose / exp(unique(parameters[[RatePlace]][subj==Subject]))
-                        lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",Info[[subj]][[as.character(i)]]$Tcrit) 
+                        if(LogParms){
+                            Info[[subj]][[as.character(i)]]$Tcrit <- Info[[subj]][[as.character(i)]]$StartTime + Info[[subj]][[as.character(i)]]$Dose / exp(unique(Parms[[RatePlace]][subj==Subject]))
+                        }else{
+                            Info[[subj]][[as.character(i)]]$Tcrit <- Info[[subj]][[as.character(i)]]$StartTime + Info[[subj]][[as.character(i)]]$Dose / unique(Parms[[RatePlace]][subj==Subject])                        
+                        }
+                        lsodaparms[length(parameters)+1] <- paste("Tcrit=",Info[[subj]][[as.character(i)]]$Tcrit) 
+                        lsodaparms[length(parameters)+2] <- paste("StartT=",Info[[subj]][[as.character(i)]]$StartTime)
                     }
                     #Estimation of Tcrit
                     if(Info[[subj]][[as.character(i)]]$Rate==-2){
-                        Info[[subj]][[as.character(i)]]$Rate <- Info[[subj]][[as.character(i)]]$Dose / (exp(unique(parameters[[TcritPlace]][subj==Subject])) - Info[[subj]][[as.character(i)]]$StartTime)
-                        lsodaparms[length(lsodaparms)+1] <- paste("Rate=",Info[[subj]][[as.character(i)]]$Rate)
-                        Info[[subj]][[as.character(i)]]$Tcrit <- exp(unique(parameters[[TcritPlace]][subj==Subject]))
+                        if(LogParms){
+                            Info[[subj]][[as.character(i)]]$Rate <- Info[[subj]][[as.character(i)]]$Dose / (exp(unique(Parms[[TcritPlace]][subj==Subject])) - Info[[subj]][[as.character(i)]]$StartTime)
+                            Info[[subj]][[as.character(i)]]$Tcrit <- exp(unique(Parms[[TcritPlace]][subj==Subject]))
+                        }else{
+                            Info[[subj]][[as.character(i)]]$Rate <- Info[[subj]][[as.character(i)]]$Dose / (unique(Parms[[TcritPlace]][subj==Subject]) - Info[[subj]][[as.character(i)]]$StartTime)                       
+                            Info[[subj]][[as.character(i)]]$Tcrit <- unique(Parms[[TcritPlace]][subj==Subject])
+                        }
+                        lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][[as.character(i)]]$Rate)
+                        lsodaparms[length(parameters)+2] <- paste("StartT=",Info[[subj]][[as.character(i)]]$StartTime)
                     }                   
                 }
             }
-                      
+
             #First time series without discontinuities
             if(i==1){
                 if(is.null(nameType)){
@@ -761,7 +752,7 @@ for(subj in unique(as.character(Subject))) {
                             #tcrit=max(data[,nameTime]),
                             #tcrit=Info[[subj]][[as.character(i)]]$Tcrit,
                             rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)                    
-                    }  
+                    }
                 }
                     TimeBefore <- rev(Time[subj == Subject & Time <= Info[[subj]][[as.character(i)]]$StartTime])[1]
                     if(i!=length(Info[[subj]])){
@@ -796,7 +787,7 @@ for(subj in unique(as.character(Subject))) {
                 }
             }
         }
- 
+
         if(SEQ==TRUE){
             SE <- unlist(SE)
             SEAll[subj==Subject,] <- SE                 
@@ -809,28 +800,28 @@ for(subj in unique(as.character(Subject))) {
             if (!is.null(Info[[subj]][["1"]]$Rate)){
                 #No estimation of infusion parameters
                 if(Info[[subj]][["1"]]$Rate>=0 & Info[[subj]][["1"]]$StartTime>=0){
-                    lsodaparms[length(lsodaparms)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
-                    lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit)
-                    lsodaparms[length(lsodaparms)+1] <- paste("StartT=",Info[[subj]][["1"]]$StartTime)
+                    lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
+                    lsodaparms[length(parameters)+2] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit)
+                    lsodaparms[length(parameters)+3] <- paste("StartT=",Info[[subj]][["1"]]$StartTime)
                 }else{
                     #Estimation of Rate
                     if(Info[[subj]][["1"]]$Rate==-1){
                         Info[[subj]][["1"]]$Tcrit <- Info[[subj]][["1"]]$StartTime + Info[[subj]][["1"]]$Dose / exp(unique(parameters[[RatePlace]][subj==Subject]))
-                        lsodaparms[length(lsodaparms)+1] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit) 
+                        lsodaparms[length(parameters)+1] <- paste("Tcrit=",Info[[subj]][["1"]]$Tcrit) 
                     }
                     #Estimation of Tcrit
                     if(Info[[subj]][["1"]]$Rate==-2){
                         Info[[subj]][["1"]]$Rate <- Info[[subj]][["1"]]$Dose / (exp(unique(parameters[[TcritPlace]][subj==Subject])) - Info[[subj]][["1"]]$StartTime)
-                        lsodaparms[length(lsodaparms)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
+                        lsodaparms[length(parameters)+1] <- paste("Rate=",Info[[subj]][["1"]]$Rate)
                         Info[[subj]][["1"]]$Tcrit <- exp(unique(parameters[[TcritPlace]][subj==Subject]))
                     }                   
                 }
             }
+
         if(is.null(nameType)){
             x  <-    lsoda(Info[[subj]][["1"]]$Init*BioComb, Time[subj == Subject], pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
                         rtol=rtol,atol=atol,jac=JACfunc,tcrit=tcrit,hmin=hmin,hmax=hmax)
-
             if(SEQ==TRUE){
                 SEAll[subj==Subject,] <- x[,c(FALSE,rep(FALSE,length(ObsStates)),rep(ObsStates,each=NoP)),drop=FALSE]
                 x <- x[,c(TRUE,rep(TRUE,length(ObsStates)),rep(FALSE,(NoS*NoP))),drop=FALSE]
