@@ -54,7 +54,7 @@ IndomethModel <- nlmeODE(TwoComp,Indometh)
 Indometh.nlme <- nlme(conc ~ IndomethModel(k12,k21,k10,start,time,Subject),
    data = Indometh, fixed=k12+k21+k10+start~1, random = pdDiag(start+k12+k10~1), 
    start=c(k12=-0.06,k21=-0.3,k10=-0.15,start=2),
-   control=list(msVerbose = TRUE))
+   control=list(msVerbose = TRUE,tolerance=1e-3,pnlsTol=0.1,msTol=1e-3))
 
 plot(augPred(Indometh.nlme,level=0:1))
 

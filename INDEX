@@ -4,4 +4,6 @@ IVInf                   Simulated PK data with a single IV infusion
 MultBolus               Simulated PK data with multiple IV bolus doses
 nlmeODE                 Non-linear mixed-effects modelling in nlme
                         using differential equations
+PKPD                    Simulated Pharmacokinetic (PK) and
+                        Pharmacodynamic (PD) data
 TheophODE               Pharmacokinetics of theophylline

@@ -38,8 +38,8 @@ IVInfModel <- nlmeODE(onecompIV,IVInf)
 
 fit <- nlme(Conc ~ IVInfModel(ke,Vd,Time,Subject),
    data = IVInf, fixed=ke+Vd~1, random = pdDiag(ke~1), 
-   start=c(ke=-2.3,Vd=.1),
-   control=list(msVerbose=TRUE))
+   start=c(ke=log(0.1),Vd=log(0.5)),
+   control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=0.1,msTol=1e-3))
 
 #plot(augPred(fit,level=0:1,length.out=300))
 }
