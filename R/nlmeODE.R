@@ -141,6 +141,11 @@ if (is.null(data$Dose)){
     }
 }
 
+##Differential equations
+parmstate <- c(model$Parms,model$States)
+pmlength <- length(parmstate)
+
+
 ##JAC Calculate the Jacobian using deriv
 if (JAC==TRUE){
     jacobi <- list()
@@ -182,13 +187,6 @@ if (JAC==TRUE){
     jacobi <- unlist(jacobi)
     
     JACseq <- jacobi
-    #for(i in 1:length(model$Parms)){
-    #    if (LogParms==TRUE){ 
-    #        jacobi <- gsub(model$Parms[i],paste("exp(p[\"",model$Parms[i],"\"])",sep=""),jacobi)
-    #    }else{
-    #        jacobi <- gsub(model$Parms[i],paste("p[\"",model$Parms[i],"\"]",sep=""),jacobi)   
-    #    }
-    #}
 
     JACfunc <- function(t, y, p){
     
@@ -327,14 +325,6 @@ if(JAC==TRUE & SEQ==TRUE){
     } 
     jacobi <- unlist(jacobi)
 
-#    for(i in 1:length(model$Parms)){
-#        if (LogParms==TRUE){ 
-#            jacobi <- gsub(model$Parms[i],paste("exp(p[\"",model$Parms[i],"\"])",sep=""),jacobi)
-#        }else{
-#            jacobi <- gsub(model$Parms[i],paste("p[\"",model$Parms[i],"\"]",sep=""),jacobi)   
-#        }
-#    }
-
     JACfunc <- function(t, y, p){
     
         for(i in 1:length(parmstate)){
@@ -353,10 +343,6 @@ if(JAC==TRUE & SEQ==TRUE){
     }
     
 }
-
-##Differential equations
-parmstate <- c(model$Parms,model$States)
-pmlength <- length(parmstate)
 
 if(SEQ==TRUE){
     for(i in 1:(NoS*NoP)){
@@ -795,7 +781,7 @@ for(subj in unique(as.character(Subject))) {
     
     }else{
     #Single dosing time series
-
+    
             #Infusion adds Rate and Tcrit parameters
             if (!is.null(Info[[subj]][["1"]]$Rate)){
                 #No estimation of infusion parameters
@@ -872,7 +858,6 @@ if(SEQ==TRUE){
 #print(lsodaparms)
 ##Pass z back to nlme
 #assign("funceval", funceval+1, env = .GlobalEnv)
-#z <- log(abs(z)+0.0001)
 
 return(z)
 }
