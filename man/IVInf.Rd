@@ -24,23 +24,21 @@
 \examples{
 data(IVInf)
 
-onecompIV <- list(DiffEq=list(              #Differential equations
-                    dy1dt = ~ -ke*y1),              #Compartment 1
-                  ObsEq=list(               #Observation equation 
-                    c1 = ~ y1/Vd),            
-                  States=c("y1"),           #The names of the states in the sequence of DiffEq
-                  Parms=c("ke","Vd"),       #Parameter names
-                  LogParms=TRUE,            #Estimate the logarithm of the parameters 
-                  Init=list(0),                #Estimate the Initial states  
-                  JAC=TRUE,                 #Use the Jacobian             
-                  SEQ=FALSE)                #Use sensitivity equations  
-
+onecompIV <- list(DiffEq=list(            
+                    dy1dt = ~ -ke*y1),    
+                  ObsEq=list(             
+                    c1 = ~ y1/Vd),        
+                  States=c("y1"),         
+                  Parms=c("ke","Vd"),     
+                  Init=list(0))
+                  
 IVInfModel <- nlmeODE(onecompIV,IVInf)
 
 fit <- nlme(Conc ~ IVInfModel(ke,Vd,Time,Subject),
    data = IVInf, fixed=ke+Vd~1, random = pdDiag(ke~1), 
    start=c(ke=log(0.1),Vd=log(1.5)),
-   control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-3,msTol=1e-3))
+   control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-3,msTol=1e-3),
+   verbose=TRUE)
 
 plot(augPred(fit,level=0:1,length.out=300))
 }

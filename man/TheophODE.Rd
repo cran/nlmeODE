@@ -56,28 +56,27 @@
   Pinheiro, J. C. and Bates, D. M. (2000) \emph{Mixed-effects Models in
     S and S-PLUS}, Springer (Appendix A.29)
 }
+\seealso{\code{\link[nls]{Theoph}}, \code{\link[nls]{SSfol}}}
 \examples{
 data(TheophODE)
 
-OneComp <- list(DiffEq=list(               #Differential equations
-                    dy1dt = ~ -ka*y1 ,        #Compartment 1
-                    dy2dt = ~ ka*y1-ke*y2),   #Compartment 2
-                ObsEq=list(                #Observation equation  
+OneComp <- list(DiffEq=list(               
+                    dy1dt = ~ -ka*y1 ,     
+                    dy2dt = ~ ka*y1-ke*y2),
+                ObsEq=list(                
                     c1 = ~ 0,
                     c2 = ~ y2/CL*ke),
-                Parms=c("ka","ke","CL"),   #Parameter names
-                LogParms=TRUE,             #Estimate the logarithm of the parameters 
-                States=c("y1","y2"),       #The names of the states in the sequence of DiffEq
-                Init=list(0,0),               #Estimate the Initial states  
-                JAC=TRUE,                  #Use the Jacobian             
-                SEQ=FALSE)                 #Use sensitivity equations   
-
+                Parms=c("ka","ke","CL"),   
+                States=c("y1","y2"),       
+                Init=list(0,0))
+                
 TheophModel <- nlmeODE(OneComp,TheophODE)
 
 Theoph.nlme <- nlme(conc ~ TheophModel(ka,ke,CL,Time,Subject),
    data = TheophODE, fixed=ka+ke+CL~1, random = pdDiag(ka+CL~1), 
    start=c(ka=0.5,ke=-2.5,CL=-3.2),
-   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3))
+   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
+   verbose=TRUE)
 
 plot(augPred(Theoph.nlme,level=0:1))
 

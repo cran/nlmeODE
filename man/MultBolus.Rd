@@ -23,23 +23,21 @@
 \examples{
 data(MultBolus)
 
-onecompIV <- list(DiffEq=list(              #Differential equations
-                    dy1dt = ~ -ke*y1),          #Compartment 1
-                  ObsEq=list(               #Observation equation
+onecompIV <- list(DiffEq=list(             
+                    dy1dt = ~ -ke*y1),     
+                  ObsEq=list(              
                     c1 = ~ y1/Vd),  
-                  States=c("y1"),           #The names of the states in the sequence of DiffEq
-                  Parms=c("ke","Vd"),       #Parameter names
-                  LogParms=TRUE,            #Estimate the logarithm of the parameters 
-                  Init=list(0),             #Estimate the Initial states  
-                  JAC=TRUE,                 #Use the Jacobian             
-                  SEQ=FALSE)                #Use sensitivity equations  
-
+                  States=c("y1"),          
+                  Parms=c("ke","Vd"),      
+                  Init=list(0))
+                  
 MultBolusModel <- nlmeODE(onecompIV,MultBolus)
 
 fit <- nlme(Conc ~ MultBolusModel(ke,Vd,Time,ID),
    data = MultBolus, fixed=ke+Vd~1, random = pdDiag(ke~1), 
-   start=c(ke=log(0.1),Vd=log(1)),
-   control=list(msVerbose=TRUE))
+   start=c(ke=log(0.1),Vd=log(1.0)),
+   control=list(msVerbose=TRUE),
+   verbose=TRUE)
    
 plot(augPred(fit,level=0:1))
 }

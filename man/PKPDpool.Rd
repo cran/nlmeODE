@@ -38,19 +38,17 @@ PoolModel <- list(
                     Pool = ~ 0),        
               States=c("y1","y2","y3"), 
               Parms=c("ke","Vd","Kin","Kout","Emax","EC50","gamma","Kloss"),
-              LogParms=TRUE,             
-              Init=list(0,"Kin/Kout","Kin/Kloss"), 
-              JAC=FALSE,           
-              SEQ=FALSE)
+              Init=list(0,"Kin/Kout","Kin/Kloss"))
 
-PoolPKPDModel <- nlmeODE(PoolModel,PKPDpool)
+PoolPKPDModel <- nlmeODE(PoolModel,PKPDpool,JAC=FALSE)
 
 PKPDpool.nlme <- nlme(Conc ~ PoolPKPDModel(ke,Vd,Kin,Kout,Emax,EC50,gamma,Kloss,Time,Subject,Type),
         data = PKPDpool, fixed=ke+Vd+Kin+Kout+EC50+gamma+Kloss~1, random = pdDiag(ke+Vd+EC50~1),
         groups=~Subject,
         weights=varIdent(form=~1|Type),
         start=c(ke=log(0.05),Vd=log(10),Kin=log(5),Kout=log(0.5),EC50=log(5),gamma=log(3),Kloss=log(2)),
-        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3,msMaxIter=20,pnlsMaxIter=20))
+        control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1,msMaxIter=20,pnlsMaxIter=20),
+        verbose=TRUE)
 
 #Plot results     
 ni <- 100

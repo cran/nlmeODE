@@ -32,29 +32,27 @@
      Pinheiro, J. C. and Bates, D. M. (2000) Mixed-effects Models in S
      and S-PLUS, Springer.
 }
+\seealso{\code{\link[nls]{Indometh}}, \code{\link[nls]{SSbiexp}}}
 \examples{
 data(Indometh)
 
-TwoComp <- list(DiffEq=list(                         #Differential equations
-                    dy1dt = ~ -(k12+k10)*y1+k21*y2 ,    #Compartment 1
-                    dy2dt = ~ -k21*y2 + k12*y1),        #Compartment 2
-                ObsEq=list(                          #Observation equation
-                    c1 = ~ y1,
-                    c2 = ~ 0),                           
-                States=c("y1","y2"),                 #The names of the states in the sequence of DiffEq
-                Parms=c("k12","k21","k10","start"),  #Parameter names
-                LogParms=TRUE,                       #Estimate the logarithm of the parameters 
-                Init=list("start",0),                   #Estimate the Initial states  
-                JAC=TRUE,                            #Use the Jacobian             
-                SEQ=FALSE)                           #Use sensitivity equations    
-
+TwoComp <- list(DiffEq=list(                         
+                    dy1dt = ~ -(k12+k10)*y1+k21*y2 , 
+                    dy2dt = ~ -k21*y2 + k12*y1),     
+                ObsEq=list(                          
+                    c1 = ~ y1,                       
+                    c2 = ~ 0),                       
+                States=c("y1","y2"),                 
+                Parms=c("k12","k21","k10","start"),  
+                Init=list("start",0))
 
 IndomethModel <- nlmeODE(TwoComp,Indometh)
 
 Indometh.nlme <- nlme(conc ~ IndomethModel(k12,k21,k10,start,time,Subject),
    data = Indometh, fixed=k12+k21+k10+start~1, random = pdDiag(start+k12+k10~1), 
    start=c(k12=-0.05,k21=-0.15,k10=-0.10,start=0.70),
-   control=list(msVerbose = TRUE))
+   control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
+   verbose=TRUE)
 
 plot(augPred(Indometh.nlme,level=0:1))
 
