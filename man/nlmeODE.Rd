@@ -35,26 +35,12 @@ by simultaneous solution of the sensitivity equations associated with the system
   A function compatible with \code{nlme} estimation for systems of ordinary differential equations (ODE's).
 }
 \note{
-  For examples of other commonly used models see \code{\link{PKPDpool}}, 
-  \code{\link{TheophODE}}, \code{\link{IndomethODE}}, and \code{\link{PKsim}}.
+  For examples of commonly used PK/PD models see \code{\link{PKPDmodels}}.
   }
 
 \author{Christoffer W. Tornoe <\email{christoffer.tornoe@ferring.com}>}
 \seealso{\code{\link[nlme]{nlme}}, \code{\link[odesolve]{lsoda}}}
-\examples{
 
-### Example with simulation and estimation of PK data 
-?PKsim
-
-### Simultaneous estimation of PK/PD data  
-?PKPDpool
-
-### Indometh example of a two-compartment model 
-?IndomethODE
-
-### Theoph example of a one-compartment model with first-order absorption  
-?TheophODE
-
-}
-
+\references{Tornoe, C. W. et al. (2004) "Non-linear mixed-effects pharmacokinetic/pharmacodynamic modelling in NLME using differential equations",
+Computer Methods and Programs in Biomedicine, 76(1), 31-40.}
 \keyword{models}

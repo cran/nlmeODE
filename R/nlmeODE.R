@@ -14,10 +14,17 @@ nameTime <- as.character(nameData[[3]][[2]])
 #Name of grouping factor
 nameSubject <- as.character(nameData[[3]][[3]])
     if(length(nameSubject)>1){
-        nameType <- as.character(nameData[[3]][[3]][[3]])
+        if((length(as.character(model$ObsEq))-length(grep("~0",as.character(model$ObsEq))))>1){ #Multiple respons
+            nameType     <- as.character(nameData[[3]][[3]][[3]])
+            nameOccasion <- as.null(character())
+        }else{ #Multiple occasions
+            nameOccasion <- as.character(nameData[[3]][[3]][[3]])
+            nameType     <- as.null(character())
+        }
         nameSubject <- as.character(nameData[[3]][[3]][[2]])
     }else{
         nameType <- as.null(character())
+        nameOccasion <- as.null(character())
     }
 
 #Number of states
@@ -92,14 +99,27 @@ if (is.null(data$Dose)){
         DoseInfo$Tcrit <- DoseInfo[,nameTime]
     }
 
+    #Number of occasions
+    if(!is.null(nameOccasion)){
+        DoseInfo$Occ <- rep(NA,dim(DoseInfo)[1])
+        DoseInfo$oldSubject <- DoseInfo$Subject
+        for(i in as.character(unique(DoseInfo[,nameSubject]))){ 
+            DoseInfo$Occ[i==DoseInfo[,nameSubject]] <- 1:nrow(DoseInfo[i==DoseInfo[,nameSubject],])
+        }
+        
+        for(i in 1:nrow(DoseInfo)){
+            DoseInfo$Subject[i] <- paste(DoseInfo$Subject[i],"/",DoseInfo[i,nameOccasion],sep="") 
+        }
+    }
+
     #Number of doses/infusions
     DoseInfo$Ndose <- rep(NA,dim(DoseInfo)[1])
     for(i in as.character(unique(DoseInfo[,nameSubject]))){ 
-        DoseInfo$Ndose[i==DoseInfo[,nameSubject]] <- dim(DoseInfo[i==DoseInfo[,nameSubject],])[1]
+            DoseInfo$Ndose[i==DoseInfo[,nameSubject]] <- dim(DoseInfo[i==DoseInfo[,nameSubject],])[1]
     }
 
     #Determine state starting value
-    for(i in as.character(unique(data[,nameSubject]))){
+    for(i in as.character(unique(DoseInfo[,nameSubject]))){
         if(SEQ==TRUE){
             InitVector <- rep(0,length(model$States)+NoS*NoP)          
         }else{
@@ -514,15 +534,21 @@ function(...) {
 
     Input <- list(...)
 
-    if(is.null(nameType)){
+    if(is.null(nameType) & is.null(nameOccasion)){
         Parms   <- Input[1:(length(Input)-2)]
         Time    <- Input[[(length(Input)-1)]]
         Subject <- Input[[length(Input)]]
     }else{
-        Parms   <- Input[1:(length(Input)-3)]
-        Time    <- Input[[(length(Input)-2)]]
-        Subject <- Input[[length(Input)-1]]
-        Type    <- Input[[length(Input)]]
+        if(is.null(nameOccasion)){
+            Parms   <- Input[1:(length(Input)-3)]
+            Time    <- Input[[(length(Input)-2)]]
+            Subject <- Input[[length(Input)-1]]
+            Type    <- Input[[length(Input)]]
+        }else{
+            Parms   <- Input[1:(length(Input)-3)]
+            Time    <- Input[[(length(Input)-2)]]
+            Subject <- paste(Input[[length(Input)-1]],"/",Input[[length(Input)]],sep="")
+        }
     }
 
     #Remove scaling and initial parameters from Parms if existing 
@@ -564,9 +590,11 @@ function(...) {
        SEAll <- matrix(NA,nrow=length(Subject),ncol=NoP)
     }
 
+
 ## Call lsoda for each subject       
 for(subj in unique(as.character(Subject))) {
    #Initial state estimates
+
     if(ninit > 0){
         if(SEQ==TRUE){
             InitVector <- Info[[subj]][[as.character(1)]]$Init
@@ -685,22 +713,23 @@ for(subj in unique(as.character(Subject))) {
 
             #First time series without discontinuities
             if(i==1){
-                if(is.null(nameType)){
+            
+                if(is.null(nameType)){   #Single response
                     xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init*BioComb,
                         Time[subj == Subject & Time <= Info[[subj]][[as.character(i+1)]]$StartTime], 
                         pkmodel,
                         tcrit=Info[[subj]][[as.character(i+1)]]$StartTime, 
-                        parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))), 
-                        #tcrit=Info[[subj]][[as.character(i)]]$Tcrit, 
+                        parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
                         rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
                 }else{
+                    
                     xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init*BioComb,
-                        Time[subj == Subject & Time <= Info[[subj]][[as.character(i+1)]]$StartTime & Type==1], 
-                        pkmodel,
-                        tcrit=Info[[subj]][[as.character(i+1)]]$StartTime, 
-                        parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))), 
-                        #tcrit=Info[[subj]][[as.character(i)]]$Tcrit, 
-                        rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
+                       Time[subj == Subject & Time <= Info[[subj]][[as.character(i+1)]]$StartTime & Type==1], 
+                       pkmodel,
+                       tcrit=Info[[subj]][[as.character(i+1)]]$StartTime, 
+                       parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
+                       rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
+                    
                 }
             }else{  
             #Remaining time series divided up into discontinuities
@@ -804,7 +833,7 @@ for(subj in unique(as.character(Subject))) {
                 }
             }
 
-        if(is.null(nameType)){
+        if(is.null(nameType)){  #Single response
             x  <-    lsoda(Info[[subj]][["1"]]$Init*BioComb, Time[subj == Subject], pkmodel, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
                         rtol=rtol,atol=atol,jac=JACfunc,tcrit=tcrit,hmin=hmin,hmax=hmax)
@@ -823,6 +852,7 @@ for(subj in unique(as.character(Subject))) {
 
 
     #Divide x with the scaling parameters
+
     FirstTime <- TRUE
     for(i in 1:length(Scale)){
         if(ObsStates[i]){

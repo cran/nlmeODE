@@ -1,9 +1,3 @@
-IndomethODE             Pharmacokinetic modelling of Indomethacin
-                        using differential equations
 nlmeODE                 Non-linear mixed-effects modelling in nlme
                         using differential equations
-PKPDpool                Simulation and simultaneous estimation of
-                        PK/PD pool model
-PKsim                   Simulation of PK data with multiple IV
-                        infusions and SC bolus doses
-TheophODE               Pharmacokinetics of theophylline
+PKPDmodels              Library of PK/PD models
