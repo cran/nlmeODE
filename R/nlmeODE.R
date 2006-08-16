@@ -73,7 +73,14 @@ if (is.null(data$Dose)){
         Info[[i]][["1"]] <- list(Init=InitVector,Tcrit=NULL)
     }
 }else{
-    DoseInfo <- as.data.frame(data[data$Dose!=0,,drop=FALSE])
+        DoseInfo <- as.data.frame(data[data$Dose!=0,,drop=FALSE])
+        
+        #If first line for each subject does not contain a dose
+        FirstLine <- data[match(unique(data[,nameSubject]),data[,nameSubject]),]
+        FirstLine <- FirstLine[FirstLine$Dose==0,]
+        if(!is.null(FirstLine)){
+            DoseInfo <- rbind(FirstLine,DoseInfo)    
+        }
 
     #Unique compartments with infusion doses
     Ucomp <- logical(length(model$States))
@@ -138,6 +145,7 @@ if (is.null(data$Dose)){
                 if(j==1){
                     InitVector[DoseSubj$Cmt[j]] <- InitVector[DoseSubj$Cmt[j]] + DoseSubj$Dose[j]
                 }else{
+	              InitVector <- rep(0,length(model$States))
                     InitVector[DoseSubj$Cmt[j]] <- DoseSubj$Dose[j]
                 }
                 if(j < dim(DoseSubj)[1]){
@@ -713,7 +721,6 @@ for(subj in unique(as.character(Subject))) {
 
             #First time series without discontinuities
             if(i==1){
-            
                 if(is.null(nameType)){   #Single response
                     xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init*BioComb,
                         Time[subj == Subject & Time <= Info[[subj]][[as.character(i+1)]]$StartTime], 
@@ -721,8 +728,7 @@ for(subj in unique(as.character(Subject))) {
                         tcrit=Info[[subj]][[as.character(i+1)]]$StartTime, 
                         parms=eval(parse(text=paste("c(",sep="",paste(lsodaparms,collapse=","),")"))),
                         rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
-                }else{
-                    
+                }else{            
                     xhat[[i]]<- lsoda(Info[[subj]][[as.character(i)]]$Init*BioComb,
                        Time[subj == Subject & Time <= Info[[subj]][[as.character(i+1)]]$StartTime & Type==1], 
                        pkmodel,
@@ -731,7 +737,7 @@ for(subj in unique(as.character(Subject))) {
                        rtol=rtol,atol=atol,jac=JACfunc,hmin=hmin,hmax=hmax)
                     
                 }
-            }else{  
+            }else{
             #Remaining time series divided up into discontinuities
                 #If final part of time series then tcrit = max(time)
                 if(i!=length(Info[[subj]])){

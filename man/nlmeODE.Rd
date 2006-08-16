@@ -38,7 +38,7 @@ by simultaneous solution of the sensitivity equations associated with the system
   For examples of commonly used PK/PD models see \code{\link{PKPDmodels}}.
   }
 
-\author{Christoffer W. Tornoe <\email{christoffer.tornoe@ferring.com}>}
+\author{Christoffer W. Tornoe <\email{ctornoe@gmail.com}>}
 \seealso{\code{\link[nlme]{nlme}}, \code{\link[odesolve]{lsoda}}}
 
 \references{Tornoe, C. W. et al. (2004) "Non-linear mixed-effects pharmacokinetic/pharmacodynamic modelling in NLME using differential equations",

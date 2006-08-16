@@ -28,15 +28,15 @@ OneComp <- list(DiffEq=list(
                 
 TheophModel <- nlmeODE(OneComp,TheophODE)
 
-#Remove '#' below to run the estimation
+\dontrun{
+Theoph.nlme <- nlme(conc ~ TheophModel(ka,ke,CL,Time,Subject),
+   data = TheophODE, fixed=ka+ke+CL~1, random = pdDiag(ka+CL~1), 
+   start=c(ka=0.5,ke=-2.5,CL=-3.2),
+   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
+   verbose=TRUE)
 
-#Theoph.nlme <- nlme(conc ~ TheophModel(ka,ke,CL,Time,Subject),
-#   data = TheophODE, fixed=ka+ke+CL~1, random = pdDiag(ka+CL~1), 
-#   start=c(ka=0.5,ke=-2.5,CL=-3.2),
-#   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
-#   verbose=TRUE)
-
-#plot(augPred(Theoph.nlme,level=0:1))
+plot(augPred(Theoph.nlme,level=0:1))
+}
 
 #########################################
 ### Pharmacokinetics of Indomethacine ###
@@ -56,15 +56,15 @@ TwoComp <- list(DiffEq=list(
 
 IndomethModel <- nlmeODE(TwoComp,Indometh)
 
-#Remove '#' below to run the estimation
+\dontrun{
+Indometh.nlme <- nlme(conc ~ IndomethModel(k12,k21,k10,start,time,Subject),
+   data = Indometh, fixed=k12+k21+k10+start~1, random = pdDiag(start+k12+k10~1), 
+   start=c(k12=-0.05,k21=-0.15,k10=-0.10,start=0.70),
+   control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
+   verbose=TRUE)
 
-#Indometh.nlme <- nlme(conc ~ IndomethModel(k12,k21,k10,start,time,Subject),
-#   data = Indometh, fixed=k12+k21+k10+start~1, random = pdDiag(start+k12+k10~1), 
-#   start=c(k12=-0.05,k21=-0.15,k10=-0.10,start=0.70),
-#   control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
-#   verbose=TRUE)
-
-#plot(augPred(Indometh.nlme,level=0:1))
+plot(augPred(Indometh.nlme,level=0:1))
+}
 
 #################################################################
 ### Absorption model with estimation of time/rate of infusion ###
@@ -113,14 +113,14 @@ plot(Data,aspect=1/1)
 #Estimation of model parameters
 OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 
-#Remove '#' below to run the estimation
-
-#fit1 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Time,ID),
-#        data = Data, fixed=ka+CL+V1+F1~1, random = pdDiag(ka+CL+V1~1), 
-#        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8)),
-#        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
-#        verbose=TRUE)
-#plot(augPred(fit1,level=0:1,length.out=300),aspect=1/1)
+\dontrun{
+fit1 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Time,ID),
+        data = Data, fixed=ka+CL+V1+F1~1, random = pdDiag(ka+CL+V1~1), 
+        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8)),
+        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+        verbose=TRUE)
+plot(augPred(fit1,level=0:1,length.out=300),aspect=1/1)
+}
 
 #Estimation of rate of infusion
 Data$Rate[Data$Rate==5] <- -1
@@ -137,15 +137,15 @@ OneCompAbs <- list(DiffEq=list(
 
 OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 
-#Remove '#' below to run the estimation
+\dontrun{
+fit2 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Rate,Time,ID),
+        data = Data, fixed=ka+CL+V1+F1+Rate~1, random = pdDiag(ka+CL+V1~1), 
+        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Rate=log(5)),
+        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+        verbose=TRUE)
 
-#fit2 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Rate,Time,ID),
-#        data = Data, fixed=ka+CL+V1+F1+Rate~1, random = pdDiag(ka+CL+V1~1), 
-#        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Rate=log(5)),
-#        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
-#        verbose=TRUE)
-
-#plot(augPred(fit2,level=0:1,length.out=300),aspect=1/1)
+plot(augPred(fit2,level=0:1,length.out=300),aspect=1/1)
+}
 
 #Estimation of length of infusion
 Data$Rate[Data$Rate==-1] <- -2
@@ -162,14 +162,13 @@ OneCompAbs <- list(DiffEq=list(
 
 OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 
-#Remove '#' below to run the estimation
-
-#fit3 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Tcrit,Time,ID),
-#        data = Data, fixed=ka+CL+V1+F1+Tcrit~1, random = pdDiag(ka+CL+V1~1), 
-#        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Tcrit=log(20)),
-#        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
-#        verbose=TRUE)
-
+\dontrun{
+fit3 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Tcrit,Time,ID),
+        data = Data, fixed=ka+CL+V1+F1+Tcrit~1, random = pdDiag(ka+CL+V1~1), 
+        start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Tcrit=log(20)),
+        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+        verbose=TRUE)
+}
 
 ############################################################
 ### Simulation and simultaneous estimation of PK/PD data ###
@@ -228,15 +227,15 @@ Data$Emax  <-  rep(log(1),dim(Data)[1])
 #Estimation of model parameters
 PKPDpoolModel <- nlmeODE(PoolModel,Data,JAC=FALSE)
 
-#Remove '#' below to run the estimation
-
-#PKPDpool.nlme <- nlme(Conc ~ PKPDpoolModel(ke,Vd,Kin,kout,krel,Emax,EC50,gamma,Time,ID,Type),
-#        data = Data, fixed=ke+Vd+Kin+kout+krel+EC50+gamma~1, random = pdDiag(ke+Vd+EC50~1),
-#        groups=~ID,
-#        weights=varIdent(form=~1|Type),
-#        start=c(ke=log(0.05),Vd=log(10),Kin=log(5),kout=log(0.5),krel=log(2),EC50=log(5),gamma=log(3)),
-#        control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1,msMaxIter=20,pnlsMaxIter=20),
-#        verbose=TRUE)
+\dontrun{
+PKPDpool.nlme <- nlme(Conc ~ PKPDpoolModel(ke,Vd,Kin,kout,krel,Emax,EC50,gamma,Time,ID,Type),
+        data = Data, fixed=ke+Vd+Kin+kout+krel+EC50+gamma~1, random = pdDiag(ke+Vd+EC50~1),
+        groups=~ID,
+        weights=varIdent(form=~1|Type),
+        start=c(ke=log(0.05),Vd=log(10),Kin=log(5),kout=log(0.5),krel=log(2),EC50=log(5),gamma=log(3)),
+        control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1,msMaxIter=20,pnlsMaxIter=20),
+        verbose=TRUE)
+}
 
 }
 \keyword{models}
