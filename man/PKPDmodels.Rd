@@ -32,7 +32,7 @@ TheophModel <- nlmeODE(OneComp,TheophODE)
 Theoph.nlme <- nlme(conc ~ TheophModel(ka,ke,CL,Time,Subject),
    data = TheophODE, fixed=ka+ke+CL~1, random = pdDiag(ka+CL~1), 
    start=c(ka=0.5,ke=-2.5,CL=-3.2),
-   control=list(returnObject=TRUE,msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
+   control=list(returnObject=TRUE,msVerbose=TRUE),
    verbose=TRUE)
 
 plot(augPred(Theoph.nlme,level=0:1))
@@ -60,7 +60,7 @@ IndomethModel <- nlmeODE(TwoComp,Indometh)
 Indometh.nlme <- nlme(conc ~ IndomethModel(k12,k21,k10,start,time,Subject),
    data = Indometh, fixed=k12+k21+k10+start~1, random = pdDiag(start+k12+k10~1), 
    start=c(k12=-0.05,k21=-0.15,k10=-0.10,start=0.70),
-   control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1),
+   control=list(msVerbose=TRUE),
    verbose=TRUE)
 
 plot(augPred(Indometh.nlme,level=0:1))
@@ -117,8 +117,9 @@ OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 fit1 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Time,ID),
         data = Data, fixed=ka+CL+V1+F1~1, random = pdDiag(ka+CL+V1~1), 
         start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8)),
-        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+        control=list(msVerbose=TRUE,pnlsTol=1),
         verbose=TRUE)
+
 plot(augPred(fit1,level=0:1,length.out=300),aspect=1/1)
 }
 
@@ -141,7 +142,7 @@ OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 fit2 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Rate,Time,ID),
         data = Data, fixed=ka+CL+V1+F1+Rate~1, random = pdDiag(ka+CL+V1~1), 
         start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Rate=log(5)),
-        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+        control=list(msVerbose=TRUE,pnlsTol=1),
         verbose=TRUE)
 
 plot(augPred(fit2,level=0:1,length.out=300),aspect=1/1)
@@ -166,8 +167,10 @@ OneCompAbsModel <- nlmeODE(OneCompAbs,Data)
 fit3 <- nlme(Conc ~ OneCompAbsModel(ka,CL,V1,F1,Tcrit,Time,ID),
         data = Data, fixed=ka+CL+V1+F1+Tcrit~1, random = pdDiag(ka+CL+V1~1), 
         start=c(ka=log(0.05),CL=log(0.5),V1=log(10.0),F1=log(0.8),Tcrit=log(20)),
-        control=list(msVerbose=TRUE,tolerance=1e-3,pnlsTol=1e-1,msTol=1e-3),
+        control=list(msVerbose=TRUE,pnlsTol=1),
         verbose=TRUE)
+
+plot(augPred(fit3,level=0:1,length.out=300),aspect=1/1)
 }
 
 ############################################################
@@ -233,8 +236,88 @@ PKPDpool.nlme <- nlme(Conc ~ PKPDpoolModel(ke,Vd,Kin,kout,krel,Emax,EC50,gamma,T
         groups=~ID,
         weights=varIdent(form=~1|Type),
         start=c(ke=log(0.05),Vd=log(10),Kin=log(5),kout=log(0.5),krel=log(2),EC50=log(5),gamma=log(3)),
-        control=list(msVerbose=TRUE,tolerance=1e-1,pnlsTol=1e-1,msTol=1e-1,msMaxIter=20,pnlsMaxIter=20),
+        control=list(msVerbose=TRUE,msMaxIter=20,pnlsMaxIter=20,pnlsTol=1),
         verbose=TRUE)
+
+  #Plot results
+     ni <- 100
+
+     TimeSim <- seq(from=0,to=24,length=ni)
+     TimeSim <- rep(rep(TimeSim,each=2),12)
+
+     SubjectSim <- rep(1:12,each=2*ni)
+     TypeSim <- rep(rep(c(1,2),ni),12)
+
+     IndCoef <- coef(PKPDpool.nlme)
+     IpredSim <- PKPDpoolModel(
+                     rep(IndCoef[,1],each=2*ni),
+                     rep(IndCoef[,2],each=2*ni),
+                     rep(IndCoef[,3],each=2*ni),
+                     rep(IndCoef[,4],each=2*ni),
+                     rep(IndCoef[,5],each=2*ni),
+                     rep(rep(log(1),12),each=2*ni),
+                     rep(IndCoef[,6],each=2*ni),
+                     rep(IndCoef[,7],each=2*ni),
+                     TimeSim,SubjectSim,TypeSim)
+
+     PopCoef <- fixef(PKPDpool.nlme)
+     PredSim <- PKPDpoolModel(  rep(rep(PopCoef[1],12),each=2*ni),
+                     rep(rep(PopCoef[2],12),each=2*ni),
+                     rep(rep(PopCoef[3],12),each=2*ni),
+                     rep(rep(PopCoef[4],12),each=2*ni),
+                     rep(rep(PopCoef[5],12),each=2*ni),
+                     rep(rep(log(1),12),each=2*ni),
+                     rep(rep(PopCoef[6],12),each=2*ni),
+                     rep(rep(PopCoef[7],12),each=2*ni),
+                     TimeSim,SubjectSim,TypeSim)
+
+     plotPool <- as.data.frame(rbind(cbind(TimeSim,SubjectSim,PredSim,TypeSim,rep("Pred",2400)),
+                               cbind(TimeSim,SubjectSim,IpredSim,TypeSim,rep("Ipred",2400)),
+                               cbind(Data$Time,Data$ID,Data$Conc,Data$Type,rep("Obs",288))
+                              ))
+     names(plotPool) <- c("Time","Subject","Conc","Type","Flag")
+
+     plotPool$Subject <- as.factor(as.numeric(as.character(plotPool$Subject)))
+     plotPool$Type <- as.factor(plotPool$Type)
+     plotPool$Flag <- as.factor(plotPool$Flag)
+     plotPool$Conc <- as.numeric(as.character(plotPool$Conc))
+     plotPool$Time <- as.numeric(as.character(plotPool$Time))
+
+     plotPoolPK <- subset(plotPool,Type==1)
+     plotPoolPD <- subset(plotPool,Type==2)
+
+     xyplot (Conc~Time | Subject, data=plotPoolPK,
+                            layout=c(4,3),
+                            aspect=1/1,
+                            groups=Flag,
+                            grid=TRUE,
+                            xlab="Time since drug administration (hr)",
+                            ylab="PK concentration (ng/mL)",
+                            key=list(x=0,y=1,corner=c(0,0),transparent=TRUE,
+                                 text = list(c("Population", "Individual","Observed")),
+                                 lines = list(type=c("l","l","p"), pch=1, col=c(1,1,1), lty=c(2,1,1)),columns=3),
+                            strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
+                            panel = function(x, y, groups,...) {
+                                     panel.grid(h=3,v=3,col="lightgray",lwd=0.7,...)
+                                panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c(1,1,1), lty=c(1,1,2),pch=1, lwd=1.4,...)},
+                            par.strip.text=list(cex=1.0))
+
+     xyplot (Conc~Time | Subject, data=plotPoolPD,
+                            layout=c(4,3),
+                            aspect=1/1,
+                            groups=Flag,
+                            grid=TRUE,
+                            xlab="Time since drug administration (hr)",
+                            ylab="PD concentration (ng/mL)",
+                            key=list(x=0,y=1,corner=c(0,0),transparent=TRUE,
+                                 text = list(c("Population", "Individual","Observed")),
+                                 lines = list(type=c("l","l","p"), pch=1, col=c(1,1,1), lty=c(2,1,1)),columns=3),
+                            strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
+                            panel = function(x, y, groups,...) {
+                                     panel.grid(h=3,v=3,col="lightgray",lwd=0.7,...)
+                                panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c(1,1,1), lty=c(1,1,2),pch=1, lwd=1.4,...)},
+                            par.strip.text=list(cex=1.0))
+
 }
 
 }
