@@ -229,7 +229,7 @@ j <- 2
             j <- j + 1
             JACfunc[j] <- "}"
             JACfunc <- eval(parse(text=JACfunc))
-            assign(".JACfunc",JACfunc, pos = .GlobalEnv)
+            #assign(".JACfunc",JACfunc, pos = .GlobalEnv)
 
     }
     else {
@@ -379,7 +379,7 @@ j <- 2
             j <- j + 1
         JACfunc[j] <- "}"
         JACfunc <- eval(parse(text=JACfunc))
-       assign(".JACfunc",JACfunc, pos = .GlobalEnv)
+       #assign(".JACfunc",JACfunc, pos = .GlobalEnv)
 
     }
     if (SEQ == TRUE) {
