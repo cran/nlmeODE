@@ -1,7 +1,7 @@
 \name{nlmeODE}
 \alias{nlmeODE}
 \title{Non-linear mixed-effects modelling in nlme using differential equations}
-\description{This package combines the \code{odesolve} and \code{nlme} packages for mixed-effects modelling.}
+\description{This package combines the \code{deSolve} and \code{nlme} packages for mixed-effects modelling.}
 \usage{nlmeODE(model,data,LogParms,JAC,SEQ,rtol,atol,tcrit,hmin,hmax)}
 
 \arguments{
@@ -20,7 +20,7 @@
 \note{For examples of commonly used PK/PD models see \code{\link{PKPDmodels}}.}
 
 \author{Christoffer W. Tornoe <\email{ctornoe@gmail.com}>}
-\seealso{\code{\link[nlme]{nlme}}, \code{\link[odesolve]{lsoda}}}
+\seealso{\code{\link[nlme]{nlme}}, \code{\link[deSolve]{lsoda}}}
 
 \references{Tornoe, C. W. et al. (2004a) "Non-linear mixed-effects pharmacokinetic/pharmacodynamic modelling in NLME using differential equations", Computer Methods and Programs in Biomedicine, 76(1), 31-40 and Tornoe, C. W. et al. (2004b) "Pharmacokinetic/Pharmacodynamic Modelling of GnRH Antagonist Degarelix: A Comparison of the Non-linear Mixed-Effects Programs NONMEM and NLME",Journal of Pharmacokinetics and Pharmacodynamics, 31(6), 441-461.}
 

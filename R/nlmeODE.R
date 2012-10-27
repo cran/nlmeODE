@@ -743,24 +743,24 @@ pkmodel <- eval(parse(text=pkmodel))
                     }
                   }
                   if (i == 1) {
-                    if (is.null(nameType)) {
-                      xhat[[i]] <- lsoda(Info[[subj]][[as.character(i)]]$Init * 
+                    if (is.null(nameType)) {        
+					  xhat[[i]] <- lsoda(Info[[subj]][[as.character(i)]]$Init * 
                         BioComb, Time[subj == Subject & Time <= 
                         Info[[subj]][[as.character(i + 1)]]$StartTime], 
                         pkmodel, tcrit = Info[[subj]][[as.character(i + 
                           1)]]$StartTime, parms = eval(parse(text = paste("c(", 
                           sep = "", paste(lsodaparms, collapse = ","), 
-                          ")"))), rtol = rtol, atol = atol, jac = JACfunc, 
+                          ")"))), rtol = rtol, atol = atol, jacfunc = JACfunc, 
                         hmin = hmin, hmax = hmax)
                     }
                     else {
-                      xhat[[i]] <- lsoda(Info[[subj]][[as.character(i)]]$Init * 
+                       xhat[[i]] <- lsoda(Info[[subj]][[as.character(i)]]$Init * 
                         BioComb, Time[subj == Subject & Time <= 
                         Info[[subj]][[as.character(i + 1)]]$StartTime & 
                         Type == 1], pkmodel, tcrit = Info[[subj]][[as.character(i + 
                         1)]]$StartTime, parms = eval(parse(text = paste("c(", 
                         sep = "", paste(lsodaparms, collapse = ","), 
-                        ")"))), rtol = rtol, atol = atol, jac = JACfunc, 
+                        ")"))), rtol = rtol, atol = atol, jacfunc = JACfunc, 
                         hmin = hmin, hmax = hmax)
                     }
                   }
@@ -775,7 +775,7 @@ pkmodel <- eval(parse(text=pkmodel))
                             1)]]$StartTime], pkmodel, tcrit = Info[[subj]][[as.character(i + 
                           1)]]$StartTime, parms = eval(parse(text = paste("c(", 
                           sep = "", paste(lsodaparms, collapse = ","), 
-                          ")"))), rtol = rtol, atol = atol, jac = JACfunc, 
+                          ")"))), rtol = rtol, atol = atol, jacfunc = JACfunc, 
                           hmin = hmin, hmax = hmax)
                       }
                       else {
@@ -789,7 +789,7 @@ pkmodel <- eval(parse(text=pkmodel))
                             1)]]$StartTime, parms = eval(parse(text = paste("c(", 
                             sep = "", paste(lsodaparms, collapse = ","), 
                             ")"))), rtol = rtol, atol = atol, 
-                          jac = JACfunc, hmin = hmin, hmax = hmax)
+                          jacfunc = JACfunc, hmin = hmin, hmax = hmax)
                       }
                     }
                     else {
@@ -801,7 +801,7 @@ pkmodel <- eval(parse(text=pkmodel))
                           pkmodel, parms = eval(parse(text = paste("c(", 
                             sep = "", paste(lsodaparms, collapse = ","), 
                             ")"))), rtol = rtol, atol = atol, 
-                          jac = JACfunc, hmin = hmin, hmax = hmax)
+                          jacfunc = JACfunc, hmin = hmin, hmax = hmax)
                       }
                       else {
                         xhat[[i]] <- lsoda(xhat[[i - 1]][dim(xhat[[i - 
@@ -810,7 +810,7 @@ pkmodel <- eval(parse(text=pkmodel))
                           Info[[subj]][[as.character(i)]]$StartTime & 
                           Type == 1], pkmodel, parms = eval(parse(text = paste("c(", 
                           sep = "", paste(lsodaparms, collapse = ","), 
-                          ")"))), rtol = rtol, atol = atol, jac = JACfunc, 
+                          ")"))), rtol = rtol, atol = atol, jacfunc = JACfunc, 
                           hmin = hmin, hmax = hmax)
                       }
                     }
@@ -895,10 +895,10 @@ pkmodel <- eval(parse(text=pkmodel))
                   }
                 }
                 if (is.null(nameType)) {
-                  x <- lsoda(Info[[subj]][["1"]]$Init * BioComb, 
-                    Time[subj == Subject], pkmodel, parms = eval(parse(text = paste("c(", 
+                  x <- lsoda(y=Info[[subj]][["1"]]$Init * BioComb, 
+                    times=Time[subj == Subject], func=pkmodel, parms = eval(parse(text = paste("c(", 
                       sep = "", paste(lsodaparms, collapse = ","), 
-                      ")"))), rtol = rtol, atol = atol, jac = JACfunc, 
+                      ")"))), rtol = rtol, atol = atol, jacfunc = JACfunc, 
                     tcrit = tcrit, hmin = hmin, hmax = hmax)
                   if (SEQ == TRUE) {
                     SEAll[subj == Subject, ] <- x[, c(FALSE, 
@@ -913,7 +913,7 @@ pkmodel <- eval(parse(text=pkmodel))
                     Time[subj == Subject & Type == 1], pkmodel, 
                     parms = eval(parse(text = paste("c(", sep = "", 
                       paste(lsodaparms, collapse = ","), ")"))), 
-                    rtol = rtol, atol = atol, jac = JACfunc, 
+                    rtol = rtol, atol = atol, jacfunc = JACfunc, 
                     tcrit = tcrit, hmin = hmin, hmax = hmax)
                 }
             }

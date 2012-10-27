@@ -82,7 +82,8 @@ OneCompAbs <- list(DiffEq=list(
 
 ID    <- rep(seq(1:18),each=11)
 Time  <- rep(seq(0,100,by=10),18)
-Dose  <- c(rep(c(100,0,0,100,0,0,0,0,0,0,0),6),rep(c(100,0,0,0,0,0,0,100,0,0,0),6),rep(c(100,0,0,0,0,0,0,0,0,0,0),6))
+Dose  <- c(rep(c(100,0,0,100,0,0,0,0,0,0,0),6),rep(c(100,0,0,0,0,0,0,100,0,0,0),6),
+			rep(c(100,0,0,0,0,0,0,0,0,0,0),6))
 Rate  <- c(rep(rep(0,11),6),rep(c(5,rep(0,10)),6),rep(rep(0,11),6))
 Cmt   <- c(rep(1,6*11),rep(c(2,0,0,0,0,0,0,1,0,0,0),6),rep(2,6*11))
 Conc  <- rep(0,18*11)
@@ -214,9 +215,12 @@ krelSim  <- rep(log(2),2*12*12)
 EmaxSim  <- rep(log(1),2*12*12)
 gammaSim <- rep(log(3),2*12*12)
 
-SimData$Sim <- PKPDpoolModel(keSim,VdSim,KinSim,koutSim,krelSim,EmaxSim,EC50Sim,gammaSim,SimData$Time,SimData$ID,SimData$Type)
-SimData$Conc[SimData$Type==1] <- SimData$Sim[SimData$Type==1]*(1 + 0.1*rnorm(length(SimData[SimData$Type==1,1])))
-SimData$Conc[SimData$Type==2] <- SimData$Sim[SimData$Type==2]*(1 + 0.05*rnorm(length(SimData[SimData$Type==2,1])))
+SimData$Sim <- PKPDpoolModel(keSim,VdSim,KinSim,koutSim,krelSim,EmaxSim,EC50Sim,
+					gammaSim,SimData$Time,SimData$ID,SimData$Type)
+SimData$Conc[SimData$Type==1] <- SimData$Sim[SimData$Type==1]*(1 + 
+					0.1*rnorm(length(SimData[SimData$Type==1,1])))
+SimData$Conc[SimData$Type==2] <- SimData$Sim[SimData$Type==2]*(1 + 
+					0.05*rnorm(length(SimData[SimData$Type==2,1])))
 
 Data <- groupedData( Conc ~ Time | ID/Type,
                data = SimData,
@@ -298,11 +302,13 @@ exp(fixef(PKPDpool.nlme))
                             ylab="PK concentration (ng/mL)",
                             key=list(x=0,y=1,corner=c(0,0),transparent=TRUE,
                                  text = list(c("Population", "Individual","Observed")),
-                                 lines = list(type=c("l","l","p"), pch=16, col=c(1,"red",1), lty=c(2,1,1)),columns=3),
+                                 lines = list(type=c("l","l","p"), pch=16, col=c(1,"red",1), 
+									lty=c(2,1,1)),columns=3),
                             strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
                             panel = function(x, y, groups,...) {
                                      panel.grid(h=3,v=3,col="lightgray",lwd=0.7,...)
-                                     panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c("red",1,1), lty=c(1,1,2),pch=16, lwd=1.4,...)},
+                                     panel.superpose.2(x,y,groups,type=c("l","p","l"), 
+										col=c("red",1,1), lty=c(1,1,2),pch=16, lwd=1.4,...)},
                             par.strip.text=list(cex=1.0))
 
      xyplot (Conc~Time | Subject, data=plotPoolPD,
@@ -313,11 +319,13 @@ exp(fixef(PKPDpool.nlme))
                             ylab="PD concentration (ng/mL)",
                             key=list(x=0,y=1,corner=c(0,0),transparent=TRUE,
                                  text = list(c("Population", "Individual","Observed")),
-                                 lines = list(type=c("l","l","p"), pch=16, col=c(1,"red",1), lty=c(2,1,1)),columns=3),
+                                 lines = list(type=c("l","l","p"), pch=16, col=c(1,"red",1), 
+									lty=c(2,1,1)),columns=3),
                             strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
                             panel = function(x, y, groups,...) {
                                   panel.grid(h=3,v=3,col="lightgray",lwd=0.7,...)
-                                  panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c("red",1,1), lty=c(1,1,2),pch=16, lwd=1.4,...)},
+                                  panel.superpose.2(x,y,groups,type=c("l","p","l"), 
+									col=c("red",1,1), lty=c(1,1,2),pch=16, lwd=1.4,...)},
                             par.strip.text=list(cex=1.0))
 
 }
@@ -341,7 +349,8 @@ exp(fixef(PKPDpool.nlme))
     )
     
     id    <- rep(seq(1:12),each=2*29)
-    time  <- rep(rep(c(0,2,3,4,5,6,8,10,12,14,16,19,22,24,25,27,30,35,40,50,60,70,80,90,100,120,140,160,180),each=2),12)
+    time  <- rep(rep(c(0,2,3,4,5,6,8,10,12,14,16,19,22,24,25,27,30,35,40,50,60,70,80,90,100,120,140,160,180),
+				each=2),12)
     type  <- rep(rep(c(1,2),29),12)
     conc  <- rep(0,2*12*29)
     
@@ -364,7 +373,8 @@ exp(fixef(PKPDpool.nlme))
     
     MinModel <-nlmeODE(MMmodel,MMData)
    
-    data$sim<-MinModel(Sgsim,p2sim,Sisim,nsim,gammasim,hsim,Gbsim,Ibsim,G0sim,I0sim,data$time,data$id,data$type)
+    data$sim<-MinModel(Sgsim,p2sim,Sisim,nsim,gammasim,hsim,Gbsim,Ibsim,G0sim,I0sim,
+				data$time,data$id,data$type)
     data$conc[data$type==1] <- data$sim[data$type==1]*(1+0.2*rnorm(length(data[data$type==1,1])))
     data$conc[data$type==2] <- data$sim[data$type==2]*(1+0.2*rnorm(length(data[data$type==2,1])))
 
@@ -384,7 +394,8 @@ exp(fixef(PKPDpool.nlme))
                        groups=~id,
                        weights=varExp(0.2,form=~fitted(.)|type),
                        random=pdDiag(Sg+Si+G0~1),
-                       start=c(Sg=log(0.025),p2=log(0.007),Si=log(0.001),n=log(0.15),gamma=log(0.001),h=log(65),G0=log(250),I0=log(120)), 
+                       start=c(Sg=log(0.025),p2=log(0.007),Si=log(0.001),n=log(0.15),
+								gamma=log(0.001),h=log(65),G0=log(250),I0=log(120)), 
                        control=list(returnObject=TRUE,msVerbose=TRUE,msMaxIter=20,pnlsMaxIter=20,pnlsTol=1),
                        verbose=TRUE)
 
@@ -451,12 +462,14 @@ exp(fixef(PKPDpool.nlme))
                             ylab="Glucose concentration",
                             key=list(x=0,y=1,corner=c(0,0),transparent=TRUE,
                                  text = list(c("Population", "Individual","Observed")),
-                                 lines = list(type=c("l","l","p"), lwd=3, pch=16, col=c(1,"red",1), lty=c(1,1,1)),columns=3),
+                                 lines = list(type=c("l","l","p"), lwd=3, pch=16, col=c(1,"red",1), 
+									lty=c(1,1,1)),columns=3),
                             strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
                             panel = function(x, y, groups,...) {
                                  panel.abline(h=c(100,200,300,400),col="lightgray",lwd=0.7,...)
                                  panel.abline(v=c(0,50,100,150,200),col="lightgray",lwd=0.7,...)
-                                 panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c("red",1,1), lty=c(1,1,1),pch=16,cex=.5, lwd=2,...)},
+                                 panel.superpose.2(x,y,groups,type=c("l","p","l"), 
+									col=c("red",1,1), lty=c(1,1,1),pch=16,cex=.5, lwd=2,...)},
                             par.strip.text=list(cex=1.0))
 
      xyplot (Conc~Time | Subject, data=plotMMI,
@@ -467,12 +480,14 @@ exp(fixef(PKPDpool.nlme))
                             ylab="Insulin concentration",
                             key=list(x=0,y=1,corner=c(0,0),transparent=TRUE,
                                  text = list(c("Population", "Individual","Observed")),
-                                 lines = list(type=c("l","l","p"), lwd=3, pch=16, col=c(1,"red",1), lty=c(1,1,1)),columns=3),
+                                 lines = list(type=c("l","l","p"), lwd=3, pch=16, col=c(1,"red",1), 
+									lty=c(1,1,1)),columns=3),
                          strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
                             panel = function(x, y, groups,...) {
                                  panel.abline(h=c(100,200,300,400),col="lightgray",lwd=0.7,...)
                                  panel.abline(v=c(0,50,100,150,200),col="lightgray",lwd=0.7,...)
-                                 panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c("red",1,1), lty=c(1,1,1),pch=16,cex=.5, lwd=2,...)},
+                                 panel.superpose.2(x,y,groups,type=c("l","p","l"), 
+									col=c("red",1,1), lty=c(1,1,1),pch=16,cex=.5, lwd=2,...)},
                             par.strip.text=list(cex=1.0))
 
 }
@@ -504,7 +519,8 @@ exp(fixef(PKPDpool.nlme))
         if(t>=max(MMData$time[MMData$id==subject])){
             conc <- rev(MMData$i[MMData$id==subject & MMData$time<=t])[1]
         }else{
-            conc <- rev(MMData$i[MMData$id==subject & MMData$time<=t])[1] + dInsulin/dT*(t-rev(MMData$time[MMData$id==subject & MMData$time<=t])[1])
+            conc <- rev(MMData$i[MMData$id==subject & MMData$time<=t])[1] + 
+					dInsulin/dT*(t-rev(MMData$time[MMData$id==subject & MMData$time<=t])[1])
         }
         names(conc) <- NULL
         return(conc)
@@ -576,11 +592,13 @@ exp(fixef(PKPDpool.nlme))
                             ylab="Glucose concentration",
                             key=list(x=0,y=1,corner=c(0,0),transparent=TRUE,
                                  text = list(c("Population", "Individual","Observed")),
-                                 lines = list(type=c("l","l","p"), pch=16, lwd=3, col=c(1,"red",1), lty=c(1,1,1)),columns=3),
+                                 lines = list(type=c("l","l","p"), pch=16, lwd=3, col=c(1,"red",1), 
+									lty=c(1,1,1)),columns=3),
                             strip = function(...) strip.default(..., strip.names=c(FALSE,TRUE), style=1),
                             panel = function(x, y, groups,...) {
                                      panel.grid(h=3,v=3,col="lightgray",lwd=0.7,...)
-                                panel.superpose.2(x,y,groups,type=c("l","p","l"), col=c("red",1,1), lty=c(1,1,1),pch=16, cex=.5, lwd=3,...)},
+                                panel.superpose.2(x,y,groups,type=c("l","p","l"), 
+									col=c("red",1,1), lty=c(1,1,1),pch=16, cex=.5, lwd=3,...)},
                             par.strip.text=list(cex=1.0))
 
 
